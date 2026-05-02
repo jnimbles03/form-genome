@@ -47,12 +47,16 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Build & push image
+        # gcloud builds submit accepts only one --tag; we tag with the
+        # commit SHA, then add :latest as a separate, lightweight tag op.
+        # The trailing "." tells Cloud Build to use the checked-out source.
         run: |
-          gcloud auth configure-docker --quiet
-          gcloud builds submit \
+          gcloud builds submit . \
             --tag "$IMAGE:${GITHUB_SHA}" \
-            --tag "$IMAGE:latest" \
             --machine-type=e2-highcpu-8 \
+            --project="$PROJECT_ID"
+          gcloud container images add-tag --quiet \
+            "$IMAGE:${GITHUB_SHA}" "$IMAGE:latest" \
             --project="$PROJECT_ID"
 
       - name: Deploy to Cloud Run
