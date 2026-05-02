@@ -501,7 +501,8 @@ def migrate_instructions():
     def _extract_pdf_text(pdf_url: str) -> str:
         """Download PDF and extract text for migration (fallback for records without full_text)"""
         try:
-            resp = requests.get(pdf_url, timeout=30, headers={"User-Agent": "FormGenome/1.0"})
+            from app.services import politeness as _politeness
+            resp = requests.get(pdf_url, timeout=30, headers={"User-Agent": _politeness.USER_AGENT})
             if resp.status_code != 200:
                 return ""
             reader = PdfReader(io.BytesIO(resp.content))

@@ -1,15 +1,13 @@
 # app/api/crawl.py
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import os
-import socket
 from urllib.parse import urlparse
 
 from flask import Blueprint, request, jsonify
-from app.services import crawler
+from app.services import crawler, politeness
 import app.services.progress as prog
 
 logger = logging.getLogger(__name__)
@@ -18,110 +16,14 @@ bp = Blueprint("crawl", __name__)
 
 
 # ---------------------------------------------------------------------------
-# SSRF defense (F-CS-05)
-#
-# /crawl accepts an arbitrary URL from the request body and feeds it to the
-# crawler, which issues outbound HTTP(S) requests on the Cloud Run VPC.
-# Without validation an attacker can use the endpoint as a confused deputy
-# to probe:
-#   - GCP/AWS metadata endpoints (e.g. 169.254.169.254)
-#   - RFC1918 private ranges (10/8, 172.16/12, 192.168/16)
-#   - Loopback (127/8, ::1)
-#   - IPv6 ULA / link-local (fc00::/7, fe80::/10)
-# We block these classes here at the entry point and again before each
-# redirect hop in the deeper crawler when feasible.
+# SSRF defense (F-CS-05) lives in app/services/politeness.py so it can be
+# reused by the redirect walker. We re-export here for back-compat with any
+# callers that imported `_is_safe_crawl_target` directly from this module.
 # ---------------------------------------------------------------------------
 
-# Hostnames we will never crawl regardless of resolution (covers
-# providers that resolve metadata names to non-link-local addresses,
-# and well-known internal-only labels).
-_BLOCKED_HOSTNAMES = {
-    "metadata.google.internal",
-    "metadata",
-    "metadata.aws.internal",
-    "instance-data",
-    "instance-data.ec2.internal",
-    "localhost",
-    "ip6-localhost",
-    "ip6-loopback",
-}
-
-
 def _is_safe_crawl_target(url: str) -> tuple[bool, str]:
-    """
-    Validate that `url` points at a public, non-metadata internet host.
-
-    Returns (ok, reason). `reason` is human-readable when ok is False.
-
-    Checks performed:
-      1. URL parses and has http/https scheme.
-      2. Hostname is present and not on the explicit blocklist.
-      3. Every IP address the hostname resolves to (A and AAAA) passes:
-         not loopback, not link-local, not private, not multicast, not
-         reserved, not unspecified. Both IPv4 and IPv6 are handled by
-         the stdlib ipaddress module.
-    """
-    if not url or not isinstance(url, str):
-        return False, "empty or non-string url"
-
-    try:
-        parsed = urlparse(url)
-    except Exception as e:
-        return False, f"unparseable url: {e}"
-
-    scheme = (parsed.scheme or "").lower()
-    if scheme not in ("http", "https"):
-        return False, f"disallowed scheme: {scheme!r}"
-
-    host = (parsed.hostname or "").strip().lower()
-    if not host:
-        return False, "missing hostname"
-
-    if host in _BLOCKED_HOSTNAMES:
-        return False, f"blocked hostname: {host}"
-
-    # If the hostname is itself an IP literal, validate it directly.
-    try:
-        ip_literal = ipaddress.ip_address(host)
-        if (ip_literal.is_loopback or ip_literal.is_link_local
-                or ip_literal.is_private or ip_literal.is_multicast
-                or ip_literal.is_reserved or ip_literal.is_unspecified):
-            return False, f"blocked IP literal: {host}"
-        return True, "ok"
-    except ValueError:
-        # Not an IP literal — proceed to DNS resolution.
-        pass
-
-    # Resolve to all addresses and reject if ANY is non-public.
-    try:
-        addrinfo = socket.getaddrinfo(host, None)
-    except socket.gaierror as e:
-        return False, f"dns resolution failed: {e}"
-    except Exception as e:
-        return False, f"dns error: {e}"
-
-    seen = set()
-    for entry in addrinfo:
-        try:
-            sockaddr = entry[4]
-            ip_str = sockaddr[0]
-        except Exception:
-            continue
-        if ip_str in seen:
-            continue
-        seen.add(ip_str)
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            return False, f"unparseable resolved address: {ip_str}"
-        if (ip.is_loopback or ip.is_link_local or ip.is_private
-                or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
-            return False, f"resolved to blocked address {ip_str} ({host})"
-
-    if not seen:
-        return False, f"no addresses resolved for {host}"
-
-    return True, "ok"
+    """Back-compat shim. Prefer politeness.is_safe_crawl_target."""
+    return politeness.is_safe_crawl_target(url)
 
 # --------- helpers ---------
 def _load_ui_prefs() -> dict:
@@ -224,9 +126,10 @@ def crawl_route():
         return jsonify({"ok": False, "error": "Missing 'url'"}), 400
 
     # SSRF guard (F-CS-05): reject internal / metadata / RFC1918 targets
-    # before any outbound request is made. Performed once on the user
-    # supplied seed; redirect hops handled inside the crawler still
-    # carry residual risk and are tracked separately (see concerns below).
+    # before any outbound request is made. Wave 1.5 also closes the
+    # redirect-hop gap by replacing requests' `allow_redirects=True`
+    # with `politeness.safe_redirect_walk` for seed fetches inside the
+    # crawler — every hop is re-validated.
     safe, reason = _is_safe_crawl_target(seed)
     if not safe:
         logger.warning("Rejected /crawl request: %s (url=%s)", reason, seed)

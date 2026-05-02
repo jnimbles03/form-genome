@@ -10,15 +10,14 @@ import requests
 from typing import List, Dict, Any, Tuple
 
 from app.services.llm_router import chat_complete, LLMError
+from app.services import politeness
 
 # -----------------------------------------------------------------------------
 # HTTP helpers
 # -----------------------------------------------------------------------------
+# F-CS-10: honest UA across the codebase, no Chrome impersonation.
 BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": politeness.USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Connection": "close",
 }
