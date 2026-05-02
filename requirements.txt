@@ -1,0 +1,31 @@
+# Core dependencies
+pypdf
+requests
+flask
+flask-cors
+flask-limiter
+flask-login
+python-dotenv
+gunicorn
+beautifulsoup4
+
+# Optional features (SMS alerts, Google Sheets logging)
+twilio
+gspread
+google-auth
+
+# Cloud services
+google-cloud-storage
+authlib
+
+# Cloud SQL / PostgreSQL
+psycopg2-binary
+cloud-sql-python-connector
+pg8000  # Required by cloud-sql-python-connector for PostgreSQL
+
+# Vision analysis (PDF to image conversion)
+pdf2image==1.16.3
+pillow==10.2.0
+
+# JavaScript rendering support
+playwright==1.40.0

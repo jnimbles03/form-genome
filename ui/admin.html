@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin — The Form Genome Project</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30 20 Q35 25 40 20 L40 30 Q35 35 30 30 Z M60 20 Q65 25 70 20 L70 30 Q65 35 60 30 Z M40 20 L60 30 M30 30 L70 20 M30 40 Q35 45 40 40 L40 50 Q35 55 30 50 Z M60 40 Q65 45 70 40 L70 50 Q65 55 60 50 Z M40 40 L60 50 M30 50 L70 40 M30 60 Q35 65 40 60 L40 70 Q35 75 30 70 Z M60 60 Q65 65 70 60 L70 70 Q65 75 60 70 Z M40 60 L60 70 M30 70 L70 60 M30 80 Q35 85 40 80 M60 80 Q65 85 70 80 M40 80 L60 90 M30 90 L70 80' fill='none' stroke='%2376e0a6' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080e; --ink:#e8eef6; --muted:#a7b3ca; --hair:#243147; --card:#1f2f46; --panel:#0f1623; --accent:#76e0a6;
+  --radius:14px; --radius-lg:18px; --shadow:0 10px 30px rgba(0,0,0,.25); --tbl-font:.92rem;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+a{color:inherit;text-decoration:none}
+header{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,rgba(6,8,14,.95),rgba(6,8,14,.55),transparent);border-bottom:1px solid var(--hair)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 max(20px,4vw)}
+.header-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+h1{margin:0;font-weight:800;letter-spacing:-.01em}
+h2{margin:0 0 10px 0}
+nav{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border:1px solid var(--hair);border-radius:10px;background:#131c2a;color:var(--ink);cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);color:#0b1218;border:none;font-weight:700}
+.btn.danger{background:#cf5b74;color:#0b1218;border:none}
+.btn.ghost{background:transparent}
+.card{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius-lg);padding:18px;margin:18px 0;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin:-6px 0 12px 0}
+.card-header h2{margin:0}
+.collapse-icon{transition:transform 0.2s;font-size:18px;color:var(--muted)}
+.collapsed .collapse-icon{transform:rotate(-90deg)}
+.card-content{overflow-y:auto;max-height:600px}
+.collapsed .card-content{max-height:0!important;opacity:0;overflow:hidden;transition:max-height 0.3s ease-out,opacity 0.2s}
+.small{font-size:.88rem;color:var(--muted)}
+hr.rule{border:0;border-top:1px solid var(--hair);margin:14px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.col{display:flex;flex-direction:column;gap:6px}
+input,select,textarea{background:#131c2a;border:1px solid var(--hair);color:var(--ink);padding:8px;border-radius:8px;font:inherit}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#243347;color:#cfe3ff;border:1px solid #2c405e;padding:3px 8px;border-radius:999px;font-size:.78rem}
+.ok{color:#9af1cb} .err{color:#ffc0c0}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--tbl-font)}
+th,td{padding:6px 10px;border-bottom:1px solid var(--hair);vertical-align:top}
+thead th{position:sticky;top:0;background:#152033;z-index:1}
+
+/* orbs */
+#orbCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+main,header{position:relative;z-index:1}
+
+/* footer */
+footer{position:relative;z-index:1;text-align:right;padding:20px 30px 20px 20px;color:var(--muted);font-size:9px;opacity:0.5}
+footer a img:hover{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="orbCanvas"></canvas>
+
+<header>
+  <div class="wrap header-row">
+    <h1>Admin</h1>
+    <nav>
+      <a class="btn" href="/">Dashboard</a>
+      <a class="btn" href="/genetics">Global Genetics</a>
+      <a class="btn ghost" href="/infographic" target="_blank" rel="noopener">Methodology</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- LLM Discovery Settings -->
+  <section class="card" id="llmCard">
+    <div class="card-header" onclick="toggleSection('llmCard')">
+      <h2>LLM Discovery Settings</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="row">
+      <div class="col">
+        <label class="small">Provider</label>
+        <select id="llmProvider">
+          <option value="xai">xAI (Grok)</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="gemini">Gemini</option>
+        </select>
+      </div>
+      <div class="col" style="min-width:280px">
+        <label class="small">Model</label>
+        <input id="llmModel" type="text" placeholder="e.g., grok-4-latest / gpt-4o-mini / claude-3-5-sonnet-20240620 / gemini-1.5-pro"/>
+      </div>
+      <div class="col">
+        <label class="small">Admin PIN</label>
+        <input id="pinLLM" type="password" placeholder="PIN"/>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <button id="saveLLM" class="btn primary" type="button">Save</button>
+        <span id="llmMsg" class="small"></span>
+      </div>
+    </div>
+    <div class="small" id="llmHealth" style="margin-top:8px;color:#a7b3ca"></div>
+    </div>
+  </section>
+
+  <!-- Column Widths -->
+  <section class="card" id="widthsCard">
+    <div class="card-header" onclick="toggleSection('widthsCard')">
+      <h2>Column Widths (Dashboard & Genetics)</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="small" style="margin-bottom:6px">
+      Enter widths in <strong>px</strong> or <strong>%</strong> (e.g., <code>120px</code> or <code>18%</code>).
+      <span class="badge">Applies to BOTH pages</span>
+    </div>
+    <div class="row">
+      <input id="pinW" type="password" placeholder="Admin PIN"/>
+      <button id="saveWidths" class="btn primary" type="button">Save widths</button>
+      <button id="resetWidths" class="btn" type="button">Reset to defaults (unsaved)</button>
+      <span id="widthsMsg" class="small"></span>
+    </div>
+    <hr class="rule"/>
+    <div id="widthsGrid" class="row" style="gap:12px"></div>
+    </div>
+  </section>
+
+  <!-- Column Order & Donut Configuration -->
+  <section class="card" id="orderCard">
+    <div class="card-header" onclick="toggleSection('orderCard')">
+      <h2>Column Order & Donut Configuration</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="small" style="margin-bottom:12px">
+      Configure which columns appear in the Dashboard and Genetics tables, and customize the 4 donut charts.
+      <span class="badge">Applies to BOTH pages</span>
+    </div>
+
+    <!-- Donut Configuration -->
+    <h3 style="margin:16px 0 8px 0">Donut Charts</h3>
+    <div class="row" style="gap:12px;margin-bottom:16px">
+      <div class="col" style="min-width:200px">
+        <label class="small">Donut 1</label>
+        <select id="donut1Sel" class="donut-select"></select>
+      </div>
+      <div class="col" style="min-width:200px">
+        <label class="small">Donut 2</label>
+        <select id="donut2Sel" class="donut-select"></select>
+      </div>
+      <div class="col" style="min-width:200px">
+        <label class="small">Donut 3</label>
+        <select id="donut3Sel" class="donut-select"></select>
+      </div>
+      <div class="col" style="min-width:200px">
+        <label class="small">Donut 4</label>
+        <select id="donut4Sel" class="donut-select"></select>
+      </div>
+    </div>
+
+    <!-- Column Order -->
+    <h3 style="margin:16px 0 8px 0">Column Order</h3>
+    <div class="small" style="margin-bottom:8px">
+      Drag columns to reorder them. Top = leftmost in table. Checkbox column always appears first.
+    </div>
+    <div id="colOrderList" style="border:1px solid var(--hair);border-radius:10px;background:var(--panel);padding:8px;max-height:400px;overflow-y:auto;margin-bottom:12px"></div>
+
+    <!-- Save -->
+    <div class="row">
+      <input id="pinOrder" type="password" placeholder="Admin PIN"/>
+      <button id="saveOrder" class="btn primary" type="button">Save Configuration</button>
+      <button id="resetOrder" class="btn" type="button">Reset to Defaults (unsaved)</button>
+      <span id="orderMsg" class="small"></span>
+    </div>
+    </div>
+  </section>
+
+  <!-- DEBUGGER (new) -->
+  <section class="card" id="debugCard">
+    <div class="card-header" onclick="toggleSection('debugCard')">
+      <h2>Debugger</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+
+    <!-- Quick env -->
+    <div class="small" id="dbgEnv" style="margin-bottom:8px;color:#a7b3ca"></div>
+
+    <!-- Toolbar -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <button class="btn" id="dbgPingProgress">Ping /api/progress</button>
+      <button class="btn" id="dbgGetRecords">GET /api/records</button>
+      <button class="btn" id="dbgGetCommitted">GET /api/records?committed=1</button>
+      <button class="btn" id="dbgGetPrefs">GET /api/admin/ui_prefs</button>
+      <button class="btn" id="dbgClear">Clear</button>
+      <button class="btn" id="dbgCopy">Copy</button>
+      <button class="btn" id="dbgDownload">Download</button>
+      <label class="small" style="display:inline-flex;gap:6px;align-items:center">
+        <input type="checkbox" id="dbgPersist"/> Persist logs
+      </label>
+    </div>
+
+    <!-- One-shot tests -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+      <label class="small" style="display:flex;flex-direction:column;gap:6px;min-width:320px;flex:1">
+        Crawl test URL
+        <input id="dbgCrawlUrl" type="text" placeholder="https://example.com/forms" />
+      </label>
+      <button class="btn" id="dbgCrawlGo">POST /api/crawl</button>
+
+      <label class="small" style="display:flex;flex-direction:column;gap:6px;min-width:320px;flex:1">
+        Analyze PDF URL
+        <input id="dbgPdfUrl" type="text" placeholder="https://example.com/file.pdf" />
+      </label>
+      <button class="btn" id="dbgAnalyzeGo">POST /api/analyze_pdf</button>
+    </div>
+
+    <!-- Custom request -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px">
+      <label class="small" style="display:flex;flex-direction:column;gap:6px;min-width:320px;flex:1">
+        Custom GET/POST URL
+        <input id="dbgUrl" type="text" placeholder="/api/records or https://…" />
+      </label>
+      <label class="small" style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+        Method
+        <select id="dbgMethod">
+          <option>GET</option>
+          <option>POST</option>
+        </select>
+      </label>
+      <label class="small" style="display:flex;flex-direction:column;gap:6px;min-width:320px;flex:1">
+        JSON Body (POST only)
+        <textarea id="dbgBody" placeholder='{"key":"value"}' style="min-height:68px"></textarea>
+      </label>
+      <button class="btn" id="dbgSend">Send</button>
+    </div>
+
+    <!-- LLM discovery health -->
+    <div class="small" id="dbgLLM" style="margin-bottom:8px;color:#a7b3ca"></div>
+
+    <!-- Log window -->
+    <div id="dbgLogWrap" style="border:1px solid var(--hair);border-radius:10px;background:var(--panel);padding:8px;max-height:360px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12.5px;line-height:1.4"></div>
+    </div>
+  </section>
+
+  <!-- Record Management -->
+  <section class="card" id="recordsCard">
+    <div class="card-header" onclick="toggleSection('recordsCard')">
+      <h2>Record Management</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="small" style="margin-bottom:12px">
+      View, edit, and delete individual or batch records. All operations require Admin PIN.
+    </div>
+
+    <!-- Toolbar -->
+    <div class="row" style="margin-bottom:12px">
+      <input id="recordSearch" type="text" placeholder="Search by form name or URL..." style="flex:1;min-width:300px"/>
+      <button id="loadRecords" class="btn primary" type="button">Load Records</button>
+      <button id="deleteSelected" class="btn danger" type="button" style="display:none">Delete Selected</button>
+      <span id="recordCount" class="small">0 records</span>
+    </div>
+
+    <!-- Records Table -->
+    <div id="recordsTableWrap" style="display:none;border:1px solid var(--hair);border-radius:10px;background:var(--panel);overflow:auto;max-height:500px">
+      <table id="recordsTable">
+        <thead>
+          <tr>
+            <th style="width:40px"><input type="checkbox" id="selectAll"/></th>
+            <th style="width:50%">Form Name</th>
+            <th>Pages</th>
+            <th>Complexity</th>
+            <th>NIGO</th>
+            <th>Committed</th>
+            <th style="width:120px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+    </div>
+
+    <div id="recordsMsg" class="small" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- Edit Record Modal -->
+  <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;padding:20px;overflow:auto">
+    <div style="max-width:600px;margin:40px auto;background:var(--card);border:1px solid var(--hair);border-radius:var(--radius-lg);padding:24px">
+      <h2 style="margin-top:0">Edit Record</h2>
+
+      <div class="col" style="gap:12px">
+        <label class="small">
+          Form Name
+          <input id="editFormName" type="text" style="width:100%"/>
+        </label>
+
+        <label class="small">
+          Entity Name
+          <input id="editEntityName" type="text" style="width:100%"/>
+        </label>
+
+        <div class="row">
+          <label class="small" style="flex:1">
+            Pages
+            <input id="editPages" type="number" min="0"/>
+          </label>
+          <label class="small" style="flex:1">
+            Complexity Score
+            <input id="editComplexity" type="number" min="0" max="100"/>
+          </label>
+          <label class="small" style="flex:1">
+            NIGO Score
+            <input id="editNigo" type="number" min="0" max="100"/>
+          </label>
+        </div>
+
+        <label class="small">
+          <input id="editCommitted" type="checkbox"/> Committed
+        </label>
+
+        <label class="small">
+          Admin PIN
+          <input id="editPIN" type="password" placeholder="Required to save"/>
+        </label>
+
+        <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px">
+          <button id="cancelEdit" class="btn" type="button">Cancel</button>
+          <button id="saveEdit" class="btn primary" type="button">Save Changes</button>
+        </div>
+
+        <span id="editMsg" class="small"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Maintenance -->
+  <section class="card" id="maintCard">
+    <div class="card-header" onclick="toggleSection('maintCard')">
+      <h2>Maintenance</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="row">
+      <input id="pinDel" type="password" placeholder="Admin PIN"/>
+      <button id="deleteAll" class="btn danger" type="button">Delete ALL Records</button>
+      <span id="delMsg" class="small"></span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="countEmpty" class="btn" type="button">Count empty rows</button>
+      <button id="cleanupEmpty" class="btn" type="button">Cleanup empty rows</button>
+      <span id="emptyMsg" class="small"></span>
+    </div>
+    <hr class="rule"/>
+    <div class="small">Sample of latest rows</div>
+    <div id="sampleWrap" style="margin-top:6px;border:1px solid var(--hair);border-radius:10px;background:var(--panel);padding:10px;max-height:260px;overflow:auto"></div>
+    </div>
+  </section>
+
+  <!-- Activity Logs -->
+  <section class="card" id="activityCard">
+    <div class="card-header" onclick="toggleSection('activityCard')">
+      <h2>Activity Logs</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="small" style="margin-bottom:12px">
+      View user login history, form analysis activity, and system usage statistics.
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--hair);padding-bottom:8px">
+      <button class="btn" id="tabLogins" style="background:var(--accent);color:#0b1218" onclick="switchActivityTab('logins')">Login Activity</button>
+      <button class="btn ghost" id="tabAnalysis" onclick="switchActivityTab('analysis')">Analysis Activity</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="loginStats" style="display:none;margin-bottom:16px">
+      <div class="row" style="gap:16px">
+        <div class="badge">Total Logins: <strong id="totalLogins">0</strong></div>
+        <div class="badge">Unique Users: <strong id="uniqueUsers">0</strong></div>
+        <div class="badge">Last 24h: <strong id="last24h">0</strong></div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="row" style="margin-bottom:12px">
+      <input id="pinLogin" type="password" placeholder="Admin PIN"/>
+      <button id="loadLogins" class="btn primary" type="button">Load Login Activity</button>
+      <button id="refreshLogins" class="btn" type="button" style="display:none">Refresh</button>
+      <span id="loginMsg" class="small"></span>
+    </div>
+
+    <!-- Login Table -->
+    <div id="loginTableWrap" style="display:none;border:1px solid var(--hair);border-radius:10px;background:var(--panel);overflow:auto;max-height:500px">
+      <table id="loginTable">
+        <thead>
+          <tr>
+            <th style="width:180px">Timestamp</th>
+            <th style="width:35%">Email</th>
+            <th style="width:25%">Name</th>
+            <th style="width:120px">IP Address</th>
+            <th>Browser</th>
+          </tr>
+        </thead>
+        <tbody id="loginBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Analysis Activity Stats -->
+    <div id="analysisStats" style="display:none;margin-bottom:16px">
+      <div class="row" style="gap:16px;flex-wrap:wrap">
+        <div class="badge">Total Activities: <strong id="totalActivities">0</strong></div>
+        <div class="badge">Crawls: <strong id="totalCrawls">0</strong></div>
+        <div class="badge">Analyses: <strong id="totalAnalyses">0</strong></div>
+        <div class="badge">Success Rate: <strong id="successRate">0</strong>%</div>
+        <div class="badge">Forms Found: <strong id="totalFormsFound">0</strong></div>
+        <div class="badge">Forms Analyzed: <strong id="totalFormsAnalyzed">0</strong></div>
+      </div>
+    </div>
+
+    <!-- Analysis Activity Toolbar -->
+    <div id="analysisToolbar" style="display:none" class="row" style="margin-bottom:12px">
+      <button id="loadAnalysis" class="btn primary" type="button">Load Analysis Activity</button>
+      <button id="refreshAnalysis" class="btn" type="button" style="display:none">Refresh</button>
+      <span id="analysisMsg" class="small"></span>
+    </div>
+
+    <!-- Analysis Activity Table -->
+    <div id="analysisTableWrap" style="display:none;border:1px solid var(--hair);border-radius:10px;background:var(--panel);overflow:auto;max-height:500px">
+      <table id="analysisTable">
+        <thead>
+          <tr>
+            <th style="width:180px">Timestamp</th>
+            <th style="width:30%">Email</th>
+            <th style="width:80px">Type</th>
+            <th style="width:25%">URL</th>
+            <th style="width:80px">Found</th>
+            <th style="width:80px">Analyzed</th>
+            <th style="width:80px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="analysisBody"></tbody>
+      </table>
+    </div>
+    </div>
+  </section>
+
+  <!-- Forms for Review -->
+  <section class="card" id="reviewCard">
+    <div class="card-header" onclick="toggleSection('reviewCard')">
+      <h2>Forms for Review</h2>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="card-content">
+    <div class="small" style="margin-bottom:12px">
+      Review non-actionable forms (reports, handbooks, etc.) and low-complexity forms that may need deletion.
+    </div>
+
+    <!-- Stats -->
+    <div id="reviewStats" style="display:none;margin-bottom:16px">
+      <div class="row" style="gap:16px">
+        <div class="badge">Non-Actionable: <strong id="nonActionableCount">0</strong></div>
+        <div class="badge">Low Complexity: <strong id="lowComplexityCount">0</strong></div>
+        <div class="badge">Total: <strong id="totalReviewCount">0</strong></div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="row" style="margin-bottom:12px">
+      <input id="pinReview" type="password" placeholder="Admin PIN"/>
+      <button id="loadReview" class="btn primary" type="button">Load Forms for Review</button>
+      <button id="deleteReviewSelected" class="btn danger" type="button" style="display:none">Delete Selected</button>
+      <span id="reviewMsg" class="small"></span>
+    </div>
+
+    <!-- Review Table -->
+    <div id="reviewTableWrap" style="display:none;border:1px solid var(--hair);border-radius:10px;background:var(--panel);overflow:auto;max-height:500px">
+      <table id="reviewTable">
+        <thead>
+          <tr>
+            <th style="width:40px"><input type="checkbox" id="selectAllReview"/></th>
+            <th style="width:50%">Form Name</th>
+            <th style="width:80px">Pages</th>
+            <th style="width:80px">Complexity</th>
+            <th style="width:120px">Reason</th>
+            <th style="width:100px">URL</th>
+          </tr>
+        </thead>
+        <tbody id="reviewBody"></tbody>
+      </table>
+    </div>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+
+/* ===== Orbs ===== */
+window.addEventListener('load', ()=>{
+  const c=document.getElementById('orbCanvas'); if(!c) return;
+  const x=c.getContext('2d');
+  function rs(){ c.width=innerWidth; c.height=innerHeight; } rs(); addEventListener('resize',rs);
+  class O{ constructor(){ this.r=Math.random()*3+1; this.x=Math.random()*c.width; this.y=Math.random()*c.height; this.dx=(Math.random()-.5)*.6; this.dy=(Math.random()-.5)*.6; }
+    step(){ this.x+=this.dx; this.y+=this.dy; if(this.x<0||this.x>c.width)this.dx*=-1; if(this.y<0||this.y>c.height)this.dy*=-1; }
+    draw(){ const g=x.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*20); g.addColorStop(0,'#76e0a6'); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(this.x-this.r*20,this.y-this.r*20,this.r*40,this.r*40); } }
+  const orbs=[...Array(50)].map(()=>new O());
+  (function loop(){ x.clearRect(0,0,c.width,c.height); x.fillStyle='#06080e'; x.fillRect(0,0,c.width,c.height); orbs.forEach(o=>{o.step();o.draw();}); requestAnimationFrame(loop); })();
+});
+
+/* ===== Broadcast ===== */
+const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('fgp_prefs') : null;
+function broadcastPrefsUpdated(kind){
+  try{ bc && bc.postMessage({type:'prefs_updated', kind, ts:Date.now()}); }catch(_){}
+  localStorage.setItem('FGP_PREFS_BUMP', String(Date.now()));
+}
+
+/* ===== HTTP ===== */
+async function getJSON(u){ const r=await fetch(u); const t=await r.text(); if(!r.ok) throw new Error(t||r.statusText); return JSON.parse(t); }
+async function postJSON(u,b){ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}); const t=await r.text(); let j={}; try{j=JSON.parse(t);}catch{} if(!r.ok) throw new Error(j.error||t||r.statusText); return j; }
+
+/* ===== Collapsible Sections ===== */
+function toggleSection(cardId){
+  const card = document.getElementById(cardId);
+  if(!card) return;
+  card.classList.toggle('collapsed');
+}
+function initCollapsible(){
+  // Collapsible sections are now handled by CSS - no dynamic max-height needed
+  // Cards have overflow-y:auto with max-height:600px for scrolling
+}
+
+/* ===== Prefs & widths ===== */
+let PREFS = {};
+const DEFAULT_COLS = [
+  'form_name','entity_name','pages','complexity_score','nigo_score','genome_rank','signature_analysis.signature_count',
+  'attachments_required','notarization_required','conditional_logic','deadlines_present','third_party_involved',
+  'field_count','text_fields','checkboxes','dropdowns',
+  'language_count','estimated_signer_time','estimated_processing_time',
+  'action_type','same_domain','witnesses_required','identification_required','click_to_agree','form_dependencies',
+  'industry_vertical','industry_subvertical','key_drivers','special_requirements',
+  'timestamp','source_url'
+];
+const DEFAULT_WIDTHS = {
+  'form_name':'18%','entity_name':'14%','pages':'60px','complexity_score':'90px','nigo_score':'90px','genome_rank':'110px',
+  'signature_analysis.signature_count':'90px','attachments_required':'80px','notarization_required':'80px',
+  'conditional_logic':'80px','deadlines_present':'80px','third_party_involved':'80px',
+  'field_count':'80px','text_fields':'80px','checkboxes':'80px','dropdowns':'80px',
+  'language_count':'80px','estimated_signer_time':'110px','estimated_processing_time':'120px',
+  'action_type':'220px','same_domain':'80px','witnesses_required':'80px',
+  'identification_required':'80px','click_to_agree':'80px','form_dependencies':'80px',
+  'industry_vertical':'140px','industry_subvertical':'160px',
+  'key_drivers':'240px','special_requirements':'240px',
+  'timestamp':'120px','source_url':'90px'
+};
+function applyPrefsToUI(){
+  const prov=(PREFS.llm_provider||'xai').toLowerCase();
+  document.getElementById('llmProvider').value=prov;
+  document.getElementById('llmModel').value=PREFS.llm_model||'';
+}
+function renderWidthsEditor(){
+  const grid=document.getElementById('widthsGrid');
+  const widths={...DEFAULT_WIDTHS, ...(PREFS.col_widths||{})};
+  grid.innerHTML = DEFAULT_COLS.map(c=>{
+    const label=c.replace(/_/g,' ').replace(/\./g,' ');
+    const val=widths[c]||'';
+    return `<label class="row" style="min-width:360px">
+      <span class="small" style="min-width:240px;display:inline-block">${label.toUpperCase()}</span>
+      <input data-col="${c}" value="${val}" placeholder="e.g., 120px or 12%">
+    </label>`;
+  }).join('');
+}
+async function loadPrefs(){
+  try{ PREFS = await getJSON('/api/admin/ui_prefs'); }catch{ PREFS={}; }
+  applyPrefsToUI(); renderWidthsEditor();
+}
+function normalizeWidth(v){
+  if(!v) return ''; v=String(v).trim();
+  if(!v) return ''; if(!/%$|px$/.test(v)){ const n=parseInt(v,10); return Number.isFinite(n)?`${n}px`:''; }
+  return v;
+}
+async function saveLLMPrefs(){
+  const pin=(document.getElementById('pinLLM').value||'').trim();
+  const msg=document.getElementById('llmMsg');
+  if(!pin){ msg.textContent='Enter PIN'; msg.className='small err'; return; }
+  const prefs={...(PREFS||{}),
+    llm_provider: document.getElementById('llmProvider').value,
+    llm_model: (document.getElementById('llmModel').value||'').trim()
+  };
+  try{
+    const r=await postJSON('/api/admin/ui_prefs',{pin, prefs});
+    msg.textContent = r.ok ? 'Saved' : (r.msg||'Save failed'); msg.className = r.ok ? 'small ok' : 'small err';
+    if(r.ok){ PREFS=prefs; broadcastPrefsUpdated('llm'); }
+  }catch(e){ msg.textContent=e.message||'Save failed'; msg.className='small err'; }
+}
+async function saveWidths(){
+  const pin=(document.getElementById('pinW').value||'').trim();
+  const msg=document.getElementById('widthsMsg');
+  if(!pin){ msg.textContent='Enter PIN'; msg.className='small err'; return; }
+  const col_widths={};
+  document.querySelectorAll('#widthsGrid input[data-col]').forEach(inp=>{
+    const k=inp.getAttribute('data-col'); const nv=normalizeWidth(inp.value);
+    if(nv) col_widths[k]=nv;
+  });
+  const prefs={...(PREFS||{}), col_widths};
+  try{
+    const r=await postJSON('/api/admin/ui_prefs',{pin, prefs});
+    if(r.ok){
+      PREFS=prefs; msg.textContent='Saved (applies to Dashboard & Genetics). Reloading…'; msg.className='small ok';
+      broadcastPrefsUpdated('widths'); setTimeout(()=>location.reload(), 600);
+    }else{ msg.textContent=r.msg||'Save failed'; msg.className='small err'; }
+  }catch(e){ msg.textContent=e.message||'Save failed'; msg.className='small err'; }
+}
+
+/* ===== Column Order & Donut Configuration ===== */
+const DONUT_COLS = [
+  {key:'action_type',label:'Action Type'},
+  {key:'attachments_required',label:'Attachments Required'},
+  {key:'notarization_required',label:'Notarization Required'},
+  {key:'conditional_logic',label:'Conditional Logic'},
+  {key:'deadlines_present',label:'Deadlines Present'},
+  {key:'third_party_involved',label:'Third Party Involved'},
+  {key:'same_domain',label:'Same Domain'},
+  {key:'witnesses_required',label:'Witnesses Required'},
+  {key:'identification_required',label:'ID Required'},
+  {key:'click_to_agree',label:'Click to Agree'},
+  {key:'language_count',label:'Language Count (Multi)'},
+  {key:'industry_vertical',label:'Industry Vertical'},
+  {key:'industry_subvertical',label:'Industry Sub-vertical'}
+];
+
+let currentColOrder = [];
+
+function renderDonutSelects(){
+  const defaults = {d1:'action_type', d2:'identification_required', d3:'attachments_required', d4:'conditional_logic'};
+  const config = {...defaults, ...(PREFS.donut_config||{})};
+
+  ['donut1Sel','donut2Sel','donut3Sel','donut4Sel'].forEach((id, idx) => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = DONUT_COLS.map(c =>
+      `<option value="${c.key}" ${c.key === config[`d${idx+1}`] ? 'selected' : ''}>${c.label}</option>`
+    ).join('');
+  });
+}
+
+function renderColOrderList(reset = false){
+  const list = document.getElementById('colOrderList');
+
+  // Only reset from prefs if explicitly requested or on first load
+  if(reset || currentColOrder.length === 0){
+    const order = PREFS.col_order || DEFAULT_COLS;
+    currentColOrder = [...order];
+  }
+
+  list.innerHTML = currentColOrder.map((col, idx) => {
+    const label = col.replace(/_/g,' ').replace(/\./g,' ').replace(/signature analysis/,'sig').toUpperCase();
+    return `<div draggable="true" data-col="${col}" data-idx="${idx}"
+      style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin:4px 0;background:#131c2a;border:1px solid var(--hair);border-radius:8px;cursor:move">
+      <span style="color:var(--muted);font-size:11px;min-width:30px">${idx+1}</span>
+      <span style="flex:1;font-size:13px">${label}</span>
+      <button class="btn" style="padding:4px 8px;font-size:11px" onclick="moveCol(${idx},-1)">↑</button>
+      <button class="btn" style="padding:4px 8px;font-size:11px" onclick="moveCol(${idx},1)">↓</button>
+    </div>`;
+  }).join('');
+
+  // Add drag & drop listeners
+  list.querySelectorAll('[draggable]').forEach(el => {
+    el.addEventListener('dragstart', handleDragStart);
+    el.addEventListener('dragover', handleDragOver);
+    el.addEventListener('dragenter', handleDragEnter);
+    el.addEventListener('dragleave', handleDragLeave);
+    el.addEventListener('drop', handleDrop);
+    el.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+let dragSrcEl = null;
+function handleDragStart(e){
+  dragSrcEl = this;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.getAttribute('data-col'));
+  this.style.opacity = '0.4';
+}
+function handleDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+function handleDragEnter(e){
+  if(this !== dragSrcEl){
+    this.style.borderColor = '#76e0a6';
+  }
+}
+function handleDragLeave(e){
+  this.style.borderColor = '';
+}
+function handleDrop(e){
+  e.stopPropagation();
+  e.preventDefault();
+
+  this.style.borderColor = '';
+
+  if(dragSrcEl !== this){
+    const fromIdx = parseInt(dragSrcEl.getAttribute('data-idx'));
+    const toIdx = parseInt(this.getAttribute('data-idx'));
+    const [moved] = currentColOrder.splice(fromIdx, 1);
+    currentColOrder.splice(toIdx, 0, moved);
+    renderColOrderList();
+  }
+  return false;
+}
+function handleDragEnd(e){
+  this.style.opacity = '1';
+  // Reset all border colors
+  document.querySelectorAll('#colOrderList [draggable]').forEach(el => {
+    el.style.borderColor = '';
+  });
+}
+
+function moveCol(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= currentColOrder.length) return;
+  [currentColOrder[idx], currentColOrder[newIdx]] = [currentColOrder[newIdx], currentColOrder[idx]];
+  renderColOrderList();
+}
+
+async function saveOrderConfig(){
+  const pin = (document.getElementById('pinOrder').value||'').trim();
+  const msg = document.getElementById('orderMsg');
+  if(!pin){ msg.textContent='Enter PIN'; msg.className='small err'; return; }
+
+  const donut_config = {
+    d1: document.getElementById('donut1Sel').value,
+    d2: document.getElementById('donut2Sel').value,
+    d3: document.getElementById('donut3Sel').value,
+    d4: document.getElementById('donut4Sel').value
+  };
+
+  const prefs = {...(PREFS||{}), col_order: currentColOrder, donut_config};
+
+  try{
+    const r = await postJSON('/api/admin/ui_prefs', {pin, prefs});
+    if(r.ok){
+      PREFS = prefs;
+      msg.textContent = 'Saved! Reloading pages...';
+      msg.className = 'small ok';
+      broadcastPrefsUpdated('order');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      msg.textContent = r.msg || 'Save failed';
+      msg.className = 'small err';
+    }
+  }catch(e){
+    msg.textContent = e.message || 'Save failed';
+    msg.className = 'small err';
+  }
+}
+
+function resetOrderConfig(){
+  PREFS.col_order = [...DEFAULT_COLS];
+  PREFS.donut_config = {d1:'action_type', d2:'identification_required', d3:'attachments_required', d4:'conditional_logic'};
+  renderDonutSelects();
+  renderColOrderList(true); // Reset from defaults
+  document.getElementById('orderMsg').textContent = 'Reset (not saved)';
+  document.getElementById('orderMsg').className = 'small';
+}
+
+/* ===== Maintenance ===== */
+async function deleteAll(){
+  const pin=(document.getElementById('pinDel').value||'').trim();
+  const msg=document.getElementById('delMsg');
+  if(!pin){ msg.textContent='Enter PIN'; msg.className='small err'; return; }
+  if(!confirm('Delete ALL records?')) return;
+  try{
+    const r=await postJSON('/api/delete_records',{pin});
+    msg.textContent = r.ok ? `Deleted ${r.deleted}` : (r.msg||'Failed');
+    msg.className = r.ok ? 'small ok' : 'small err';
+    await loadSample();
+  }catch(e){
+    msg.textContent = e.message || 'Error';
+    msg.className='small err';
+  }
+}
+async function countEmpty(){
+  try{
+    const j=await getJSON('/api/maintenance/count_empty');
+    document.getElementById('emptyMsg').textContent=`Empty rows: ${j.empty}`;
+    document.getElementById('emptyMsg').className='small';
+  }catch(e){
+    document.getElementById('emptyMsg').textContent='Endpoint not available';
+    document.getElementById('emptyMsg').className='small err';
+  }
+}
+async function cleanupEmpty(){
+  const pin=(document.getElementById('pinDel').value||'').trim();
+  if(!pin){ document.getElementById('emptyMsg').textContent='Enter PIN (uses same field)'; document.getElementById('emptyMsg').className='small err'; return; }
+  try{
+    const r=await postJSON('/api/maintenance/cleanup_empty',{pin});
+    document.getElementById('emptyMsg').textContent = r.ok ? `Deleted ${r.deleted}` : (r.msg||'Failed');
+    document.getElementById('emptyMsg').className = r.ok ? 'small ok' : 'small err';
+    await loadSample();
+  }catch(e){
+    document.getElementById('emptyMsg').textContent='Endpoint not available';
+    document.getElementById('emptyMsg').className='small err';
+  }
+}
+async function loadSample(){
+  const el=document.getElementById('sampleWrap');
+  try{
+    const rows=await getJSON('/api/records');
+    const sample=rows.slice(-10).reverse();
+    if(!sample.length){ el.innerHTML='<div class="small" style="color:#a7b3ca">No records</div>'; return; }
+    let html='<table><thead><tr><th>FORM</th><th>PAGES</th><th>ACTION TYPE</th><th>TS</th></tr></thead><tbody>';
+    sample.forEach(r=>{
+      const name=r.pretty_title||r.form_name||r.form_title||'—';
+      html+=`<tr><td>${name}</td><td>${r.pages??'—'}</td><td>${r.action_type||'—'}</td><td>${r.timestamp??''}</td></tr>`;
+    });
+    html+='</tbody></table>'; el.innerHTML=html;
+  }catch(e){ el.innerHTML='<div class="small" style="color:#ffb4b4">Failed to load records</div>'; }
+}
+
+/* ===== Record Management ===== */
+let allRecords = [];
+let currentEditRecord = null;
+
+async function loadRecords(){
+  const msg = document.getElementById('recordsMsg');
+  const tableWrap = document.getElementById('recordsTableWrap');
+  const countEl = document.getElementById('recordCount');
+
+  try {
+    msg.textContent = 'Loading...';
+    msg.className = 'small';
+
+    const records = await getJSON('/api/records');
+    allRecords = records;
+
+    renderRecordsTable(records);
+    tableWrap.style.display = 'block';
+    countEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
+    msg.textContent = '';
+  } catch(e) {
+    msg.textContent = 'Failed to load records: ' + (e.message || String(e));
+    msg.className = 'small err';
+  }
+}
+
+function renderRecordsTable(records){
+  const tbody = document.getElementById('recordsBody');
+  const search = (document.getElementById('recordSearch').value || '').toLowerCase();
+
+  // Filter by search
+  const filtered = search ? records.filter(r => {
+    const name = (r.form_name || r.form_title || '').toLowerCase();
+    const url = (r.source_url || '').toLowerCase();
+    return name.includes(search) || url.includes(search);
+  }) : records;
+
+  tbody.innerHTML = '';
+
+  filtered.forEach(r => {
+    const tr = document.createElement('tr');
+    const rid = r.id || r.sha1 || r._id || '';
+
+    tr.innerHTML = `
+      <td style="text-align:center"><input type="checkbox" class="record-checkbox" data-id="${rid}"/></td>
+      <td style="text-align:left">${r.form_name || r.form_title || 'Untitled'}</td>
+      <td style="text-align:center">${r.pages ?? '—'}</td>
+      <td style="text-align:center">${r.complexity_score ?? '—'}</td>
+      <td style="text-align:center">${r.nigo_score ?? '—'}</td>
+      <td style="text-align:center">${r.committed ? '✓ Yes' : '— No'}</td>
+      <td style="text-align:center">
+        <button class="btn" style="padding:4px 8px;font-size:11px;margin-right:4px" onclick="openEditModal('${rid}')">Edit</button>
+        <button class="btn danger" style="padding:4px 8px;font-size:11px" onclick="deleteRecord('${rid}')">Delete</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  updateDeleteSelectedButton();
+  document.getElementById('recordCount').textContent = `${filtered.length} of ${records.length} record${records.length !== 1 ? 's' : ''}`;
+}
+
+function openEditModal(recordId){
+  const record = allRecords.find(r => (r.id || r.sha1 || r._id) === recordId);
+  if(!record) return;
+
+  currentEditRecord = record;
+
+  document.getElementById('editFormName').value = record.form_name || record.form_title || '';
+  document.getElementById('editEntityName').value = record.entity_name || '';
+  document.getElementById('editPages').value = record.pages || 0;
+  document.getElementById('editComplexity').value = record.complexity_score || 0;
+  document.getElementById('editNigo').value = record.nigo_score || 0;
+  document.getElementById('editCommitted').checked = !!record.committed;
+  document.getElementById('editPIN').value = '';
+  document.getElementById('editMsg').textContent = '';
+
+  document.getElementById('editModal').style.display = 'block';
+}
+
+async function saveRecordEdit(){
+  if(!currentEditRecord) return;
+
+  const pin = (document.getElementById('editPIN').value || '').trim();
+  const msg = document.getElementById('editMsg');
+
+  if(!pin){
+    msg.textContent = 'Admin PIN required';
+    msg.className = 'small err';
+    return;
+  }
+
+  const recordId = currentEditRecord.id || currentEditRecord.sha1 || currentEditRecord._id;
+
+  const updates = {
+    form_name: document.getElementById('editFormName').value.trim(),
+    entity_name: document.getElementById('editEntityName').value.trim(),
+    pages: parseInt(document.getElementById('editPages').value) || 0,
+    complexity_score: parseInt(document.getElementById('editComplexity').value) || 0,
+    nigo_score: parseInt(document.getElementById('editNigo').value) || 0,
+    committed: document.getElementById('editCommitted').checked
+  };
+
+  try {
+    const res = await postJSON('/api/update_record', {pin, id: recordId, updates});
+
+    if(res.ok){
+      msg.textContent = 'Saved successfully!';
+      msg.className = 'small ok';
+
+      // Update local record
+      Object.assign(currentEditRecord, updates);
+      renderRecordsTable(allRecords);
+
+      setTimeout(() => {
+        document.getElementById('editModal').style.display = 'none';
+        currentEditRecord = null;
+      }, 1000);
+    } else {
+      msg.textContent = res.msg || 'Save failed';
+      msg.className = 'small err';
+    }
+  } catch(e) {
+    msg.textContent = e.message || 'Save failed';
+    msg.className = 'small err';
+  }
+}
+
+async function deleteRecord(recordId){
+  if(!confirm('Delete this record? This cannot be undone.')) return;
+
+  const pin = prompt('Enter Admin PIN:');
+  if(!pin) return;
+
+  const msg = document.getElementById('recordsMsg');
+
+  try {
+    const res = await postJSON('/api/delete_records', {pin, ids: [recordId]});
+
+    if(res.ok){
+      msg.textContent = `Deleted ${res.deleted} record`;
+      msg.className = 'small ok';
+
+      // Remove from local array
+      allRecords = allRecords.filter(r => (r.id || r.sha1 || r._id) !== recordId);
+      renderRecordsTable(allRecords);
+    } else {
+      msg.textContent = res.msg || 'Delete failed';
+      msg.className = 'small err';
+    }
+  } catch(e) {
+    msg.textContent = e.message || 'Delete failed';
+    msg.className = 'small err';
+  }
+}
+
+async function deleteSelectedRecords(){
+  const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
+
+  if(!ids.length) return;
+
+  if(!confirm(`Delete ${ids.length} selected record${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  const pin = prompt('Enter Admin PIN:');
+  if(!pin) return;
+
+  const msg = document.getElementById('recordsMsg');
+
+  try {
+    const res = await postJSON('/api/delete_records', {pin, ids});
+
+    if(res.ok){
+      msg.textContent = `Deleted ${res.deleted} record${res.deleted !== 1 ? 's' : ''}`;
+      msg.className = 'small ok';
+
+      // Remove from local array
+      allRecords = allRecords.filter(r => !ids.includes(r.id || r.sha1 || r._id));
+      renderRecordsTable(allRecords);
+      document.getElementById('selectAll').checked = false;
+    } else {
+      msg.textContent = res.msg || 'Delete failed';
+      msg.className = 'small err';
+    }
+  } catch(e) {
+    msg.textContent = e.message || 'Delete failed';
+    msg.className = 'small err';
+  }
+}
+
+function updateDeleteSelectedButton(){
+  const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+  const btn = document.getElementById('deleteSelected');
+  btn.style.display = checkboxes.length > 0 ? 'inline-flex' : 'none';
+}
+
+/* ===== Login Activity ===== */
+async function loadLoginActivity() {
+  const pin = (get('pinLogin').value || '').trim();
+  const msg = get('loginMsg');
+
+  if (!pin) {
+    msg.textContent = 'Enter Admin PIN';
+    msg.className = 'small err';
+    return;
+  }
+
+  msg.textContent = 'Loading...';
+  msg.className = 'small';
+
+  try {
+    // Load statistics
+    const statsRes = await fetch(`/api/admin/login_stats?pin=${encodeURIComponent(pin)}`);
+    const statsData = await statsRes.json();
+
+    if (!statsData.ok) {
+      msg.textContent = statsData.msg || 'Failed to load stats';
+      msg.className = 'small err';
+      return;
+    }
+
+    // Load login logs
+    const logsRes = await fetch(`/api/admin/login_logs?pin=${encodeURIComponent(pin)}&limit=100`);
+    const logsData = await logsRes.json();
+
+    if (!logsData.ok) {
+      msg.textContent = logsData.msg || 'Failed to load logs';
+      msg.className = 'small err';
+      return;
+    }
+
+    // Display statistics
+    const stats = statsData.stats;
+    get('totalLogins').textContent = stats.total_logins || 0;
+    get('uniqueUsers').textContent = stats.unique_users || 0;
+    get('last24h').textContent = stats.last_24h || 0;
+    get('loginStats').style.display = 'block';
+
+    // Display login table
+    const tbody = get('loginBody');
+    tbody.innerHTML = '';
+
+    if (logsData.logs && logsData.logs.length > 0) {
+      logsData.logs.forEach(log => {
+        const tr = document.createElement('tr');
+
+        // Format timestamp
+        const date = new Date(log.timestamp * 1000);
+        const timeStr = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        // Shorten user agent to just browser name
+        const ua = log.user_agent || 'Unknown';
+        let browser = 'Unknown';
+        if (ua.includes('Chrome/')) browser = 'Chrome';
+        else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Safari';
+        else if (ua.includes('Firefox/')) browser = 'Firefox';
+        else if (ua.includes('Edg/')) browser = 'Edge';
+
+        tr.innerHTML = `
+          <td>${timeStr}</td>
+          <td>${log.email || 'Unknown'}</td>
+          <td>${log.name || '—'}</td>
+          <td>${log.ip_address || '—'}</td>
+          <td>${browser}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      get('loginTableWrap').style.display = 'block';
+      get('refreshLogins').style.display = 'inline-block';
+      msg.textContent = `Loaded ${logsData.count} login(s)`;
+      msg.className = 'small ok';
+    } else {
+      get('loginTableWrap').style.display = 'none';
+      msg.textContent = 'No login activity found';
+      msg.className = 'small';
+    }
+
+  } catch (e) {
+    msg.textContent = e.message || 'Failed to load login activity';
+    msg.className = 'small err';
+    console.error('Login activity error:', e);
+  }
+}
+
+/* ===== Analysis Activity ===== */
+function switchActivityTab(tab) {
+  const tabLogins = document.getElementById('tabLogins');
+  const tabAnalysis = document.getElementById('tabAnalysis');
+  const loginSection = document.getElementById('loginToolbar').parentElement;
+  const analysisToolbar = document.getElementById('analysisToolbar');
+
+  if (tab === 'logins') {
+    // Style tabs
+    tabLogins.style.background = 'var(--accent)';
+    tabLogins.style.color = '#0b1218';
+    tabLogins.classList.remove('ghost');
+    tabAnalysis.style.background = '';
+    tabAnalysis.style.color = '';
+    tabAnalysis.classList.add('ghost');
+
+    // Show/hide sections
+    document.getElementById('loginStats').style.display = 'block';
+    document.getElementById('loginToolbar').style.display = 'flex';
+    document.getElementById('loginTableWrap').style.display = 'block';
+    document.getElementById('analysisStats').style.display = 'none';
+    document.getElementById('analysisToolbar').style.display = 'none';
+    document.getElementById('analysisTableWrap').style.display = 'none';
+  } else {
+    // Style tabs
+    tabAnalysis.style.background = 'var(--accent)';
+    tabAnalysis.style.color = '#0b1218';
+    tabAnalysis.classList.remove('ghost');
+    tabLogins.style.background = '';
+    tabLogins.style.color = '';
+    tabLogins.classList.add('ghost');
+
+    // Show/hide sections
+    document.getElementById('loginStats').style.display = 'none';
+    document.getElementById('loginToolbar').style.display = 'none';
+    document.getElementById('loginTableWrap').style.display = 'none';
+    document.getElementById('analysisStats').style.display = 'block';
+    document.getElementById('analysisToolbar').style.display = 'flex';
+    document.getElementById('analysisTableWrap').style.display = 'block';
+  }
+}
+
+async function loadAnalysisActivity() {
+  const pin = (get('pinLogin').value || '').trim(); // Use same PIN field
+  const msg = get('analysisMsg');
+
+  if (!pin) {
+    msg.textContent = 'Enter Admin PIN in Login Activity tab';
+    msg.className = 'small err';
+    return;
+  }
+
+  msg.textContent = 'Loading...';
+  msg.className = 'small';
+
+  try {
+    // Load statistics
+    const statsRes = await fetch(`/api/admin/analysis_stats?pin=${encodeURIComponent(pin)}`);
+    const statsData = await statsRes.json();
+
+    if (!statsData.ok) {
+      msg.textContent = statsData.msg || 'Failed to load stats';
+      msg.className = 'small err';
+      return;
+    }
+
+    // Load analysis logs
+    const logsRes = await fetch(`/api/admin/analysis_logs?pin=${encodeURIComponent(pin)}&limit=100`);
+    const logsData = await logsRes.json();
+
+    if (!logsData.ok) {
+      msg.textContent = logsData.msg || 'Failed to load logs';
+      msg.className = 'small err';
+      return;
+    }
+
+    // Display statistics
+    const stats = statsData.stats;
+    get('totalActivities').textContent = stats.total_activities || 0;
+    get('totalCrawls').textContent = stats.crawls || 0;
+    get('totalAnalyses').textContent = stats.analyses || 0;
+    get('successRate').textContent = stats.success_rate || 0;
+    get('totalFormsFound').textContent = stats.total_forms_found || 0;
+    get('totalFormsAnalyzed').textContent = stats.total_forms_analyzed || 0;
+    get('analysisStats').style.display = 'block';
+
+    // Display analysis table
+    const tbody = get('analysisBody');
+    tbody.innerHTML = '';
+
+    if (logsData.logs && logsData.logs.length > 0) {
+      logsData.logs.forEach(log => {
+        const tr = document.createElement('tr');
+
+        // Format timestamp
+        const date = new Date(log.timestamp * 1000);
+        const timeStr = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        // Truncate URL
+        let url = log.source_url || '—';
+        if (url.length > 40) {
+          url = url.substring(0, 37) + '...';
+        }
+
+        // Status badge
+        const statusClass = log.success ? 'ok' : 'err';
+        const statusText = log.success ? '✓ Success' : '✗ Failed';
+
+        tr.innerHTML = `
+          <td>${timeStr}</td>
+          <td>${log.email || 'Unknown'}</td>
+          <td>${log.activity_type || '—'}</td>
+          <td title="${log.source_url || ''}">${url}</td>
+          <td style="text-align:center">${log.forms_found || 0}</td>
+          <td style="text-align:center">${log.forms_analyzed || 0}</td>
+          <td class="${statusClass}">${statusText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      get('analysisTableWrap').style.display = 'block';
+      get('refreshAnalysis').style.display = 'inline-block';
+      msg.textContent = `Loaded ${logsData.count} activities`;
+      msg.className = 'small ok';
+    } else {
+      get('analysisTableWrap').style.display = 'none';
+      msg.textContent = 'No analysis activity found';
+      msg.className = 'small';
+    }
+
+  } catch (e) {
+    msg.textContent = e.message || 'Failed to load analysis activity';
+    msg.className = 'small err';
+    console.error('Analysis activity error:', e);
+  }
+}
+
+const get = (id) => document.getElementById(id);
+
+/* ===== Forms for Review ===== */
+async function loadFormsForReview() {
+  const pin = (get('pinReview').value || '').trim();
+  const msg = get('reviewMsg');
+
+  if (!pin) {
+    msg.textContent = 'Enter Admin PIN';
+    msg.className = 'small err';
+    return;
+  }
+
+  msg.textContent = 'Loading...';
+  msg.className = 'small';
+
+  try {
+    const res = await fetch(`/api/admin/forms_for_review?pin=${encodeURIComponent(pin)}`);
+    const data = await res.json();
+
+    if (!data.ok) {
+      msg.textContent = data.msg || 'Failed to load';
+      msg.className = 'small err';
+      return;
+    }
+
+    // Display statistics
+    get('nonActionableCount').textContent = data.non_actionable.length;
+    get('lowComplexityCount').textContent = data.low_complexity.length;
+    get('totalReviewCount').textContent = data.total_review_count;
+    get('reviewStats').style.display = 'block';
+
+    // Display review table
+    const tbody = get('reviewBody');
+    tbody.innerHTML = '';
+
+    const allForms = [
+      ...data.non_actionable.map(f => ({...f, reason: 'Non-Actionable'})),
+      ...data.low_complexity.map(f => ({...f, reason: 'Low Complexity'}))
+    ];
+
+    if (allForms.length > 0) {
+      allForms.forEach(form => {
+        const tr = document.createElement('tr');
+        const rid = form.id || form.sha1 || form._id || '';
+
+        const url = (form.source_url || '').substring(0, 30) + '...';
+
+        tr.innerHTML = `
+          <td style="text-align:center"><input type="checkbox" class="review-checkbox" data-id="${rid}"/></td>
+          <td style="text-align:left">${form.form_name || form.form_title || 'Untitled'}</td>
+          <td style="text-align:center">${form.pages ?? '—'}</td>
+          <td style="text-align:center">${form.complexity_score ?? '—'}</td>
+          <td style="text-align:center"><span class="badge err">${form.reason}</span></td>
+          <td style="text-align:left;font-size:11px" title="${form.source_url || ''}">${url}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      get('reviewTableWrap').style.display = 'block';
+      get('deleteReviewSelected').style.display = 'inline-flex';
+      msg.textContent = `Found ${allForms.length} form(s) for review`;
+      msg.className = 'small ok';
+    } else {
+      get('reviewTableWrap').style.display = 'none';
+      get('deleteReviewSelected').style.display = 'none';
+      msg.textContent = 'No forms need review';
+      msg.className = 'small ok';
+    }
+
+  } catch (e) {
+    msg.textContent = e.message || 'Failed to load forms';
+    msg.className = 'small err';
+    console.error('Forms review error:', e);
+  }
+}
+
+async function deleteReviewSelected() {
+  const checkboxes = document.querySelectorAll('.review-checkbox:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
+
+  if (!ids.length) return;
+
+  if (!confirm(`Delete ${ids.length} selected form${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  const pin = (get('pinReview').value || '').trim();
+  if (!pin) {
+    get('reviewMsg').textContent = 'Enter Admin PIN';
+    get('reviewMsg').className = 'small err';
+    return;
+  }
+
+  const msg = get('reviewMsg');
+
+  try {
+    const res = await postJSON('/api/delete_records', {pin, ids});
+
+    if (res.ok) {
+      msg.textContent = `Deleted ${res.deleted} form${res.deleted !== 1 ? 's' : ''}`;
+      msg.className = 'small ok';
+
+      // Reload the review list
+      setTimeout(() => loadFormsForReview(), 500);
+    } else {
+      msg.textContent = res.msg || 'Delete failed';
+      msg.className = 'small err';
+    }
+  } catch (e) {
+    msg.textContent = e.message || 'Delete failed';
+    msg.className = 'small err';
+  }
+}
+
+/* ===== Wire ===== */
+document.getElementById('saveLLM').addEventListener('click', saveLLMPrefs);
+document.getElementById('saveWidths').addEventListener('click', saveWidths);
+document.getElementById('resetWidths').addEventListener('click', ()=>{ PREFS.col_widths={}; renderWidthsEditor(); document.getElementById('widthsMsg').textContent='Reset (not saved)'; });
+document.getElementById('saveOrder').addEventListener('click', saveOrderConfig);
+document.getElementById('resetOrder').addEventListener('click', resetOrderConfig);
+document.getElementById('deleteAll').addEventListener('click', deleteAll);
+document.getElementById('countEmpty').addEventListener('click', countEmpty);
+document.getElementById('cleanupEmpty').addEventListener('click', cleanupEmpty);
+
+// Login Activity
+document.getElementById('loadLogins').addEventListener('click', loadLoginActivity);
+document.getElementById('refreshLogins').addEventListener('click', loadLoginActivity);
+
+// Analysis Activity
+document.getElementById('loadAnalysis').addEventListener('click', loadAnalysisActivity);
+document.getElementById('refreshAnalysis').addEventListener('click', loadAnalysisActivity);
+
+// Forms for Review
+document.getElementById('loadReview').addEventListener('click', loadFormsForReview);
+document.getElementById('deleteReviewSelected').addEventListener('click', deleteReviewSelected);
+document.getElementById('selectAllReview').addEventListener('change', (e) => {
+  document.querySelectorAll('.review-checkbox').forEach(cb => cb.checked = e.target.checked);
+});
+
+// Record Management
+document.getElementById('loadRecords').addEventListener('click', loadRecords);
+document.getElementById('deleteSelected').addEventListener('click', deleteSelectedRecords);
+document.getElementById('recordSearch').addEventListener('input', () => renderRecordsTable(allRecords));
+document.getElementById('selectAll').addEventListener('change', (e) => {
+  document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = e.target.checked);
+  updateDeleteSelectedButton();
+});
+document.addEventListener('change', (e) => {
+  if(e.target.classList.contains('record-checkbox')){
+    updateDeleteSelectedButton();
+  }
+});
+document.getElementById('cancelEdit').addEventListener('click', () => {
+  document.getElementById('editModal').style.display = 'none';
+  currentEditRecord = null;
+});
+document.getElementById('saveEdit').addEventListener('click', saveRecordEdit);
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  try{
+    await loadPrefs();
+    await loadSample();
+    renderDonutSelects();
+    renderColOrderList(true); // Load from preferences
+    initCollapsible(); // Initialize collapsible sections
+  }catch(e){ console.error(e); }
+  const provider=(PREFS.llm_provider||'xai').toUpperCase(); const model=PREFS.llm_model||'(default)';
+  document.getElementById('llmHealth').textContent=`Active discovery: ${provider} ${model}`;
+});
+</script>
+
+<!-- Debugger script (separate; no HTML here) -->
+<script>
+(function(){
+  "use strict";
+  const $ = (s)=>document.querySelector(s);
+  const get = (id)=>document.getElementById(id);
+
+  /* Log buffer */
+  let LOGS = [];
+  const LOG_KEY = 'FGP_ADMIN_DEBUG_LOGS';
+  function add(type, msg, data){
+    const line = { t: Date.now(), type, msg, data };
+    LOGS.push(line);
+    if (get('dbgPersist')?.checked) {
+      try{ localStorage.setItem(LOG_KEY, JSON.stringify(LOGS)); }catch(_){}
+    }
+    renderLine(line);
+  }
+  function renderLine(line){
+    const w = get('dbgLogWrap'); if(!w) return;
+    const div = document.createElement('div'); div.style.margin='2px 0';
+    const col = line.type==='error' ? '#ffb4b4' : (line.type==='warn' ? '#ffd59f' : '#cfe3ff');
+    const pre = document.createElement('pre'); pre.style.margin='0'; pre.style.whiteSpace='pre-wrap'; pre.style.color=col;
+    const payload = line.data != null ? (' ' + safeJSON(line.data)) : '';
+    pre.textContent = `[${new Date(line.t).toLocaleTimeString([], {hour12:false})}] ${line.type.toUpperCase()}: ${line.msg}${payload}`;
+    div.appendChild(pre); w.appendChild(div); w.scrollTop = w.scrollHeight;
+  }
+  function safeJSON(x){ try{ return JSON.stringify(x); }catch(_){ return String(x); } }
+  (function restore(){
+    try{ const raw=localStorage.getItem(LOG_KEY); if(raw){ LOGS=JSON.parse(raw); const w=get('dbgLogWrap'); if(w){ w.innerHTML=''; LOGS.forEach(renderLine); } get('dbgPersist')&&(get('dbgPersist').checked=true); } }catch(_){}
+  })();
+
+  /* Mirror console */
+  ['log','warn','error'].forEach(k=>{
+    const orig = console[k].bind(console);
+    console[k] = function(...args){
+      try{ add(k, args.map(a => typeof a==='string' ? a : safeJSON(a)).join(' ')); }catch(_){}
+      return orig(...args);
+    };
+  });
+
+  /* Env + LLM snapshot */
+  (function showEnv(){
+    const ua = navigator.userAgent;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+    const now = new Date().toLocaleString();
+    const el = get('dbgEnv'); if(el) el.textContent = `UA: ${ua}  |  TZ: ${tz}  |  Now: ${now}`;
+  })();
+  (async function showLLM(){
+    try{
+      const prefs = await (await fetch('/api/admin/ui_prefs')).json();
+      const prov = (prefs.llm_provider||'xai').toUpperCase();
+      const model = prefs.llm_model || '(default)';
+      const el = get('dbgLLM'); if(el) el.textContent = `Discovery provider: ${prov}  |  Model: ${model}`;
+      add('log', 'LLM prefs', prefs);
+    }catch(e){ add('error','Failed to read ui_prefs', e); }
+  })();
+
+  /* Helpers */
+  async function getJSONx(url){
+    const r = await fetch(url); const t = await r.text(); let j=null; try{ j=JSON.parse(t);}catch(_){}
+    return { ok:r.ok, status:r.status, body:j ?? t };
+  }
+  async function postJSONx(url, body){
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const t = await r.text(); let j=null; try{ j=JSON.parse(t);}catch(_){}
+    return { ok:r.ok, status:r.status, body:j ?? t };
+  }
+
+  /* Quick buttons */
+  get('dbgPingProgress')?.addEventListener('click', async ()=> add(...(await (async ()=>{ const res=await getJSONx('/api/progress'); return [res.ok?'log':'error', 'GET /api/progress', res];})())));
+  get('dbgGetRecords') ?.addEventListener('click', async ()=> add(...(await (async ()=>{ const res=await getJSONx('/api/records'); return [res.ok?'log':'error', 'GET /api/records', res];})())));
+  get('dbgGetCommitted')?.addEventListener('click', async ()=> add(...(await (async ()=>{ const res=await getJSONx('/api/records?committed=1'); return [res.ok?'log':'error', 'GET /api/records?committed=1', res];})())));
+  get('dbgGetPrefs')    ?.addEventListener('click', async ()=> add(...(await (async ()=>{ const res=await getJSONx('/api/admin/ui_prefs'); return [res.ok?'log':'error', 'GET /api/admin/ui_prefs', res];})())));
+
+  /* One-shot tests */
+  get('dbgCrawlGo')?.addEventListener('click', async ()=>{
+    const url = get('dbgCrawlUrl')?.value?.trim();
+    if(!url){ add('warn','Enter a crawl URL'); return; }
+    add('log','POST /api/crawl {url}', url);
+    const res = await postJSONx('/api/crawl', { url, allow_offsite:true, depth:1, timeout:8, strategy:'llm_first' });
+    add(res.ok ? 'log' : 'error', 'crawl result', res);
+  });
+  get('dbgAnalyzeGo')?.addEventListener('click', async ()=>{
+    const pdf = get('dbgPdfUrl')?.value?.trim();
+    if(!pdf){ add('warn','Enter a PDF URL'); return; }
+    add('log','POST /api/analyze_pdf {pdf_url}', pdf);
+    const res = await postJSONx('/api/analyze_pdf', { pdf_url: pdf, timeout:60, disable_size_guard:true, max_pdf_mb:120, force_minimal:true });
+    add(res.ok ? 'log' : 'error', 'analyze result', res);
+  });
+
+  /* Custom sender */
+  get('dbgSend')?.addEventListener('click', async ()=>{
+    try{
+      const url = get('dbgUrl')?.value?.trim(); if(!url){ add('warn','Enter a URL'); return; }
+      const method = get('dbgMethod')?.value || 'GET';
+      let res;
+      if (method === 'GET'){
+        res = await getJSONx(url);
+      } else {
+        let body={}; const raw=get('dbgBody')?.value?.trim();
+        if (raw){ try{ body = JSON.parse(raw); }catch(e){ add('error','Body is not valid JSON', raw); return; } }
+        res = await postJSONx(url, body);
+      }
+      add(res.ok ? 'log' : 'error', `${method} ${url}`, res);
+    }catch(e){ add('error','Custom request failed', e); }
+  });
+
+  /* Toolbar: clear/copy/download/persist */
+  get('dbgClear')?.addEventListener('click', ()=>{
+    LOGS = []; const w=get('dbgLogWrap'); if(w) w.innerHTML='';
+    if (get('dbgPersist')?.checked) localStorage.setItem(LOG_KEY, '[]');
+  });
+  get('dbgCopy')?.addEventListener('click', ()=>{
+    const text = JSON.stringify(LOGS, null, 2);
+    navigator.clipboard.writeText(text).then(()=> add('log','Logs copied to clipboard'), e=> add('error','Copy failed',e));
+  });
+  get('dbgDownload')?.addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(LOGS,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`fgp-admin-debug-${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    add('log','Logs downloaded');
+  });
+  get('dbgPersist')?.addEventListener('change', (e)=>{
+    if (!e.target.checked) { try{ localStorage.removeItem(LOG_KEY); }catch(_){} }
+    else { try{ localStorage.setItem(LOG_KEY, JSON.stringify(LOGS)); }catch(_){} }
+  });
+})();
+</script>
+
+<footer>
+  <a href="https://www.meyerinterests.com/" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-bottom:8px">
+    <img src="/ui/meyerlogowhite.png" alt="Meyer Interests" style="height:50px;opacity:0.6;transition:opacity 0.2s;image-rendering:-webkit-optimize-contrast;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+  </a>
+  <div>&copy; Meyer Interests, LLC 2025</div>
+</footer>
+
+</body>
+</html>

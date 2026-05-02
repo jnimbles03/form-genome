@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Form Genome — Report</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080e; --ink:#e8eef6; --muted:#a7b3ca; --hair:#243147; --panel:#0f1623; --card:#1f2f46; --accent:#76e0a6;
+  --radius:14px; --radius-lg:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
+  --tbl-font:.92rem; --tbl-align:left;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1600px;margin:0 auto;padding:22px max(20px,4vw)}
+
+h1{margin:0 0 8px 0;font-weight:800;letter-spacing:-.01em}
+h2{margin:18px 0 10px 0}
+.small{font-size:.88rem;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius-lg);padding:18px;margin:18px 0;box-shadow:var(--shadow)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+
+/* tiles */
+.tile{flex:1 1 220px;background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:14px}
+.tile .k{display:block;color:var(--muted);font-size:.86rem}
+.tile .v{display:block;font-size:1.6rem;font-weight:800;line-height:1.15}
+
+/* table */
+#tableWrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--panel);box-shadow:var(--shadow)}
+table{width:100%;min-width:2600px;border-collapse:separate;border-spacing:0;font-size:var(--tbl-font);table-layout:auto}
+th,td{padding:8px 12px;border-bottom:1px solid var(--hair);text-align:var(--tbl-align);vertical-align:top}
+thead th{position:sticky;top:0;background:#152033;z-index:2}
+.col-form-name{width:18%;max-width:18%}
+@media (max-width:900px){ .col-form-name{width:28%;max-width:28%} }
+.col-keys,.col-special{width:14%;max-width:14%}
+.truncate{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.pill{display:inline-flex;align-items:center;gap:6px;background:#253347;color:#cfe3ff;border:1px solid #2c405e;padding:3px 8px;border-radius:999px;font-size:.78rem}
+
+/* print */
+@media print{
+  :root{--bg:#fff;--ink:#000;--muted:#444;--panel:#fff;--card:#fff;--hair:#ccc}
+  body{background:#fff;color:#000}
+  .card, #tableWrap{box-shadow:none;border-color:#ccc}
+  a{color:#000}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="margin-bottom:10px">
+    <h1>Form Genome — Report</h1>
+    <div class="small" id="subtitle">Generated on <span id="genDate"></span></div>
+  </header>
+
+  <!-- Summary tiles -->
+  <section class="row">
+    <div class="tile"><span class="k">Total Forms</span><span id="t_total" class="v">—</span></div>
+    <div class="tile"><span class="k">Signature Required</span><span id="t_sig" class="v">—</span></div>
+    <div class="tile"><span class="k">Information Collection (No Signature)</span><span id="t_info" class="v">—</span></div>
+    <div class="tile"><span class="k">Disclosure Only</span><span id="t_disc" class="v">—</span></div>
+  </section>
+
+  <!-- Filters -->
+  <section class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <label class="small">Filter by Action Type</label><br/>
+      <select id="f_action" style="background:#131c2a;border:1px solid var(--hair);color:var(--ink);padding:8px;border-radius:8px;min-width:260px">
+        <option value="">All</option>
+        <option value="Signature Required">Signature Required</option>
+        <option value="Information Collection (No Signature)">Information Collection (No Signature)</option>
+        <option value="Disclosure (No Signature, No Information Collection)">Disclosure (No Signature, No Information Collection)</option>
+      </select>
+    </div>
+    <div>
+      <label class="small">Search title</label><br/>
+      <input id="f_title" type="text" placeholder="type to filter…" style="min-width:260px;background:#131c2a;border:1px solid var(--hair);color:var(--ink);padding:8px;border-radius:8px"/>
+    </div>
+    <button id="applyFilters" class="btn" type="button">Apply</button>
+    <button id="clearFilters" class="btn" type="button">Clear</button>
+    <span style="flex:1"></span>
+    <button id="printBtn" class="btn" type="button" onclick="window.print()">Print</button>
+  </section>
+
+  <!-- Results table -->
+  <section class="card">
+    <div class="small muted" id="countLine" style="margin:0 0 10px 0">Showing — of —</div>
+    <div id="tableWrap"></div>
+  </section>
+</div>
+
+<!-- Optional: backend-injected data -->
+<script id="reportData" type="application/json"></script>
+<script>
+"use strict";
+
+/* ===== Helpers ===== */
+async function getJSON(u){ const r=await fetch(u); const t=await r.text(); if(!r.ok) throw new Error(t||r.statusText); return JSON.parse(t); }
+function byActionType(r){
+  const s = String(r.action_type||'').trim();
+  return (s==='Signature Required' || s==='Information Collection (No Signature)' || s==='Disclosure (No Signature, No Information Collection)') ? s : '—';
+}
+function looksLikeForm(r){
+  // same conservative filter used elsewhere
+  const fields = Number(r.field_count||0);
+  const sigs   = Number(r.signature_analysis?.signature_count||0);
+  const name   = (r.pretty_title||r.form_name||r.form_title||"").toLowerCase();
+  const url    = (r.source_url||"").toLowerCase();
+  if (fields>0 || sigs>0) return true;
+  if (/\/forms?\//.test(url) || /\/pdf_fill\//.test(url)) return true;
+  if (/\b(form|application|request|enrollment|authorization|consent|affidavit|declaration|appeal|designation|verification)\b/i.test(name)) return true;
+  if (/\b(report|handbook|guide|brochure|flyer|white.?paper|minutes|agenda|transcript|policy|plan|opinion|docket)\b/i.test(name)) return false;
+  return false;
+}
+function normalizeBaseTitle(s){ if(!s) return ""; let t=s.trim(); const m=t.match(/\s[—\-–]\s*([A-Za-z ]+)$/); if(m){ const lang=m[1].trim(); if (/^[A-Za-z ]{2,}$/.test(lang)) t=t.slice(0,m.index).trim(); } return t; }
+function mergeByTitleLang(rows){
+  const map=new Map();
+  rows.forEach(r=>{
+    const full=r.pretty_title||r.form_name||r.form_title||"";
+    const base=normalizeBaseTitle(full)||full||"(Untitled)";
+    const m=full.match(/\s[—\-–]\s*([A-Za-z ]+)$/); const langs=m?[m[1].trim()]:[];
+    if(!map.has(base)) map.set(base,{row:{...r},langs:new Set(langs)});
+    else langs.forEach(L=>map.get(base).langs.add(L));
+  });
+  const out=[];
+  map.forEach(({row,langs},base)=>{ row.language_count=Math.max(1,langs.size); row._languages=[...langs]; row.pretty_title=base; out.push(row); });
+  return out;
+}
+
+/* ===== Render ===== */
+const COLS = [
+  'form_name','pages','complexity_score','nigo_score','signature_analysis.signature_count',
+  'attachments_required','notarization_required','conditional_logic','deadlines_present','third_party_involved',
+  'field_count','text_fields','checkboxes','dropdowns',
+  'language_count','estimated_signer_time','estimated_processing_time',
+  'action_type',
+  'same_domain','witnesses_required','identification_required','click_to_agree','form_dependencies',
+  'industry_vertical','industry_subvertical',
+  'key_drivers','special_requirements',
+  'timestamp','source_url'
+];
+
+function thLabel(key){ return key.replace(/_/g,' ').replace(/\./g,' ').toUpperCase(); }
+
+function renderTable(rows){
+  const wrap=document.getElementById("tableWrap");
+  const countLine=document.getElementById("countLine");
+  if(!rows||rows.length===0){ wrap.innerHTML = `<div class="small" style="padding:10px;color:#a1afc4">No rows</div>`; countLine.textContent="Showing 0 of 0"; return; }
+
+  // HEAD
+  let thead = '<thead><tr>';
+  COLS.forEach(c=>{
+    const label=thLabel(c);
+    if(c==='form_name') thead+=`<th class="col-form-name">${label}</th>`;
+    else if(c==='key_drivers') thead+=`<th class="col-keys">${label}</th>`;
+    else if(c==='special_requirements') thead+=`<th class="col-special">${label}</th>`;
+    else thead+=`<th>${label}</th>`;
+  });
+  thead += '</tr></thead>';
+
+  // BODY
+  let tbody = '<tbody>';
+  rows.forEach(r=>{
+    const full=r.pretty_title||r.form_name||r.form_title||"—";
+    const kd = Array.isArray(r.key_drivers)? r.key_drivers.join(', ') : '';
+    const sr = Array.isArray(r.special_requirements)? r.special_requirements.join(', ') : '';
+    const count = Number(r.language_count || (r._languages && r._languages.length) || 1);
+    const langsTitle = (r._languages && r._languages.length) ? `Languages: ${r._languages.join(', ')}` : 'Languages merged';
+    const langBadge = count>1 ? ` <span class="pill" title="${langsTitle}">x${count}</span>` : '';
+
+    tbody += `<tr>`;
+    tbody += `<td class="col-form-name"><span class="truncate" title="${full.replace(/"/g,'&quot;')}">${full}</span>${langBadge}</td>`;
+    tbody += `<td>${r.pages??"—"}</td>`;
+    tbody += `<td>${r.complexity_score??0}</td>`;
+    tbody += `<td>${r.nigo_score??0}</td>`;
+    tbody += `<td>${r.signature_analysis?.signature_count ?? 0}</td>`;
+    ['attachments_required','notarization_required','conditional_logic','deadlines_present','third_party_involved'].forEach(k=>{
+      tbody += `<td>${(r[k]===true || String(r[k]).toLowerCase()==='yes')?'✔':'❌'}</td>`;
+    });
+    ['field_count','text_fields','checkboxes','dropdowns'].forEach(k=> tbody += `<td>${r[k]??0}</td>`);
+    tbody += `<td>${r.language_count??1}</td>`;
+    tbody += `<td>${r.estimated_signer_time??0}</td>`;
+    tbody += `<td>${r.estimated_processing_time??0}</td>`;
+    tbody += `<td>${byActionType(r)}</td>`;
+    ['same_domain','witnesses_required','identification_required','click_to_agree','form_dependencies'].forEach(k=>{
+      tbody += `<td>${(r[k]===true || String(r[k]).toLowerCase()==='yes')?'✔':'❌'}</td>`;
+    });
+    tbody += `<td>${r.industry_vertical??'—'}</td>`;
+    tbody += `<td>${r.industry_subvertical??'—'}</td>`;
+    tbody += `<td class="col-keys"><span class="truncate" title="${kd.replace(/"/g,'&quot;')}">${kd||'—'}</span></td>`;
+    tbody += `<td class="col-special"><span class="truncate" title="${sr.replace(/"/g,'&quot;')}">${sr||'—'}</span></td>`;
+    tbody += `<td>${r.timestamp??''}</td>`;
+    tbody += `<td>${r.source_url?`<a href="${r.source_url}" target="_blank" rel="noopener">View</a>`:'—'}</td>`;
+    tbody += `</tr>`;
+  });
+  tbody += '</tbody>';
+
+  wrap.innerHTML = `<table>${thead}${tbody}</table>`;
+  countLine.textContent = `Showing ${rows.length} of ${rows.length}`;
+}
+
+/* ===== Data pipeline ===== */
+function decodeInjected(){
+  const el=document.getElementById('reportData'); if(!el) return null;
+  const raw=(el.textContent||'').trim(); if(!raw) return null;
+  try{ return JSON.parse(raw); }catch{return null;}
+}
+function summarize(rows){
+  const total=rows.length;
+  const sig = rows.filter(r=>byActionType(r)==='Signature Required').length;
+  const inc = rows.filter(r=>byActionType(r)==='Information Collection (No Signature)').length;
+  const dis = rows.filter(r=>byActionType(r)==='Disclosure (No Signature, No Information Collection)').length;
+  return {total,sig,inc,dis};
+}
+function applyFilters(rows){
+  const f_act = document.getElementById('f_action').value || '';
+  const f_title = (document.getElementById('f_title').value||'').toLowerCase();
+  return rows.filter(r=>{
+    if (f_act && byActionType(r)!==f_act) return false;
+    if (f_title){
+      const title = (r.pretty_title||r.form_name||r.form_title||'').toLowerCase();
+      if (!title.includes(f_title)) return false;
+    }
+    return true;
+  });
+}
+
+let BASE_ROWS = [];
+async function boot(){
+  document.getElementById('genDate').textContent = new Date().toLocaleString();
+  let rows = decodeInjected();
+  if (!rows){
+    try{ rows = await getJSON('/api/records'); }catch{ rows = []; }
+  }
+  rows = rows.filter(looksLikeForm);
+  rows = mergeByTitleLang(rows);
+  BASE_ROWS = rows;
+
+  const {total,sig,inc,dis} = summarize(rows);
+  document.getElementById('t_total').textContent = total;
+  document.getElementById('t_sig').textContent   = sig;
+  document.getElementById('t_info').textContent  = inc;
+  document.getElementById('t_disc').textContent  = dis;
+
+  renderTable(rows);
+
+  document.getElementById('applyFilters').addEventListener('click', ()=>{
+    renderTable(applyFilters(BASE_ROWS));
+  });
+  document.getElementById('clearFilters').addEventListener('click', ()=>{
+    document.getElementById('f_action').value='';
+    document.getElementById('f_title').value='';
+    renderTable(BASE_ROWS);
+  });
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>

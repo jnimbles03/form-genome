@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form Genome Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f5f7fa;
+  color: #1a202c;
+  padding: 24px;
+  line-height: 1.6;
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 32px;
+  text-align: center;
+}
+header h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+header p {
+  opacity: 0.9;
+  font-size: 14px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+}
+.stat {
+  text-align: center;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+}
+.stat-label {
+  font-size: 13px;
+  color: #718096;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.content {
+  padding: 24px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 24px;
+}
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+thead th {
+  background: #f8f9fa;
+  color: #2d3748;
+  font-weight: 600;
+  text-align: left;
+  padding: 16px 12px;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+tbody tr:hover {
+  background: #f8fafc;
+}
+tbody td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+.form-name {
+  font-weight: 500;
+  color: #2d3748;
+  max-width: 300px;
+}
+.category {
+  color: #64748b;
+  font-size: 13px;
+}
+.bar-cell {
+  min-width: 180px;
+}
+.score-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bar-container {
+  flex: 1;
+  height: 24px;
+  background: #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.4s ease;
+}
+.bar-fill.complexity {
+  background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+}
+.bar-fill.nigo {
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+}
+.bar-value {
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 40px;
+  text-align: right;
+}
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge.yes {
+  background: #dcfce7;
+  color: #166534;
+}
+.badge.no {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.center {
+  text-align: center;
+}
+a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+a:hover {
+  text-decoration: underline;
+}
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #94a3b8;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Form Genome Analysis Report</h1>
+    <p id="report-date"></p>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="stat-total">0</div>
+      <div class="stat-label">Total Forms</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-avg-complexity">0</div>
+      <div class="stat-label">Avg Complexity</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-avg-nigo">0</div>
+      <div class="stat-label">Avg NIGO Score</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-high-complexity">0</div>
+      <div class="stat-label">High Complexity (&gt;70)</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <h2 style="margin-bottom: 16px;">Forms by Complexity (Highest First)</h2>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Form Name</th>
+            <th>Category</th>
+            <th>Pages</th>
+            <th>Complexity</th>
+            <th>NIGO Score</th>
+            <th class="center">Attachments</th>
+            <th class="center">Notary</th>
+            <th class="center">Conditional</th>
+            <th class="center">ID/PII</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr>
+            <td colspan="10" class="empty-state">No data available</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Load data from window.__REPORT_ROWS__ (set by backend)
+  const rows = window.__REPORT_ROWS__ || [];
+
+  if (!rows || rows.length === 0) {
+    console.warn('No data found in window.__REPORT_ROWS__');
+    return;
+  }
+
+  // Sort by complexity_score descending
+  const sortedRows = rows.slice().sort((a, b) => {
+    const complexityA = parseFloat(a.complexity_score) || 0;
+    const complexityB = parseFloat(b.complexity_score) || 0;
+    return complexityB - complexityA;  // Descending order
+  });
+
+  // Calculate statistics
+  const total = sortedRows.length;
+  const complexitySum = sortedRows.reduce((sum, r) => sum + (parseFloat(r.complexity_score) || 0), 0);
+  const nigoSum = sortedRows.reduce((sum, r) => sum + (parseFloat(r.nigo_score) || 0), 0);
+  const highComplexity = sortedRows.filter(r => (parseFloat(r.complexity_score) || 0) > 70).length;
+
+  const avgComplexity = total > 0 ? (complexitySum / total).toFixed(1) : 0;
+  const avgNigo = total > 0 ? (nigoSum / total).toFixed(1) : 0;
+
+  // Update stats
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-avg-complexity').textContent = avgComplexity;
+  document.getElementById('stat-avg-nigo').textContent = avgNigo;
+  document.getElementById('stat-high-complexity').textContent = highComplexity;
+  document.getElementById('report-date').textContent = `Generated ${new Date().toLocaleString()}`;
+
+  // Helper to create bar with value
+  function createBar(value, type) {
+    const numValue = parseFloat(value) || 0;
+    const width = Math.min(numValue, 100); // Cap at 100%
+
+    return `
+      <div class="score-bar">
+        <div class="bar-container">
+          <div class="bar-fill ${type}" style="width: ${width}%"></div>
+        </div>
+        <span class="bar-value">${numValue.toFixed(0)}</span>
+      </div>
+    `;
+  }
+
+  // Helper for boolean badges
+  function badge(value) {
+    const isYes = value === true || value === 'true' || value === 'Yes' || value === 'yes' || value === 1;
+    return `<span class="badge ${isYes ? 'yes' : 'no'}">${isYes ? 'Yes' : 'No'}</span>`;
+  }
+
+  // Helper to get category display
+  function getCategory(row) {
+    const vertical = row.industry_vertical || '';
+    const subvertical = row.industry_subvertical || '';
+    if (vertical && subvertical) {
+      return `${vertical} / ${subvertical}`;
+    }
+    return vertical || subvertical || '—';
+  }
+
+  // Render table rows
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = sortedRows.map(row => {
+    const formName = (row.form_name || 'Untitled Form').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const category = getCategory(row);
+    const pages = row.pages || 0;
+    const complexity = row.complexity_score || 0;
+    const nigo = row.nigo_score || 0;
+    const sourceUrl = row.source_url || '#';
+
+    return `
+      <tr>
+        <td class="form-name">${formName}</td>
+        <td class="category">${category}</td>
+        <td class="center">${pages}</td>
+        <td class="bar-cell">${createBar(complexity, 'complexity')}</td>
+        <td class="bar-cell">${createBar(nigo, 'nigo')}</td>
+        <td class="center">${badge(row.attachments_required)}</td>
+        <td class="center">${badge(row.notarization_required)}</td>
+        <td class="center">${badge(row.conditional_logic)}</td>
+        <td class="center">${badge(row.identification_required || row.pii_collection)}</td>
+        <td><a href="${sourceUrl}" target="_blank" rel="noopener">View</a></td>
+      </tr>
+    `;
+  }).join('');
+})();
+</script>
+
+</body>
+</html>

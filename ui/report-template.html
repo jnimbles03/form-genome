@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title id="page-title">Form Analysis — Citizen Friction & Full Results (Optimized)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30 20 Q35 25 40 20 L40 30 Q35 35 30 30 Z M60 20 Q65 25 70 20 L70 30 Q65 35 60 30 Z M40 20 L60 30 M30 30 L70 20 M30 40 Q35 45 40 40 L40 50 Q35 55 30 50 Z M60 40 Q65 45 70 40 L70 50 Q65 55 60 50 Z M40 40 L60 50 M30 50 L70 40 M30 60 Q35 65 40 60 L40 70 Q35 75 30 70 Z M60 60 Q65 65 70 60 L70 70 Q65 75 60 70 Z M40 60 L60 70 M30 70 L70 60 M30 80 Q35 85 40 80 M60 80 Q65 85 70 80 M40 80 L60 90 M30 90 L70 80' fill='none' stroke='%2376e0a6' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{ --accent:#0B6E4F; --ink:#222; --muted:#666; --hair:#EAEAEA; --bg:#FAFAFA; --card:#FFFFFF; --warn:#C43D00; --note:#6B7280;
+--radius:18px; --shadow: 0 6px 18px rgba(0,0,0,.06); --space: clamp(28px, 5vw, 64px);}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased;}
+a{color:inherit} .container{max-width:1440px;margin:0 auto;padding:0 var(--space)} .section{padding: calc(var(--space) * 1.25) 0}
+h1{font-size:clamp(38px,6vw,64px);line-height:1.15;margin:0 0 14px 0;font-weight:800;letter-spacing:-0.02em}
+h2{font-size:clamp(24px,4vw,32px);margin:0 0 12px 0;font-weight:700;letter-spacing:-0.01em}
+.sub{color:var(--muted);max-width:64ch;font-size:clamp(16px,2vw,18px)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px}
+@media (max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{border:1px solid var(--hair);border-radius:14px;background:#fff;padding:14px 16px;box-shadow:var(--shadow)}
+.stat .num{font-weight:800;font-size:clamp(22px,4vw,30px);color:var(--accent);line-height:1.2} .stat .label{font-size:13px;color:var(--note);margin-top:4px}
+.hero-card{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:clamp(18px,3vw,28px);margin-top:40px;grid-column:1/-1}
+.hards{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;margin-top:6px}
+@media (max-width:899.98px){.hards{grid-template-columns:1fr!important}}
+.hard{display:flex;gap:12px;align-items:flex-start;border:1px dashed var(--hair);background:#fff;border-radius:14px;padding:14px;min-width:0}
+.hard svg{min-width:24px;margin-top:2px} .hard strong{display:block}
+.badge{display:inline-block;padding:.25rem .6rem;border-radius:999px;border:1px solid var(--hair);background:#fff;font-size:12px;margin-left:8px}
+.note{color: var(--note);font-size:14px;margin-top:2px} .divider{height:1px;background:var(--hair);margin:calc(var(--space)*.75) 0}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.search{flex:1 1 320px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--hair);border-radius:999px;padding:10px 16px}
+.search input{width:100%;border:0;outline:0;font-size:15px;background:transparent} .quickfilters{display:flex;gap:10px;flex-wrap:wrap}
+.qf{border:1px solid var(--hair);background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;cursor:pointer}
+.qf.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,110,79,.12)}
+.table-wrap{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);overflow:clip}
+.table-inner{width:100%;overflow:auto} table{width:100%;border-collapse:collapse;min-width:1200px}
+thead th{position:sticky;top:0;z-index:1;background:#fff;border-bottom:1px solid var(--hair);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#444;padding:12px 14px;text-align:left;cursor:pointer}
+tbody td{border-top:1px solid #F3F3F3;padding:12px 14px;vertical-align:top;font-size:14px} tbody tr:hover{background:#F6FFF9}
+th.sort-asc::after{content:" ↑";color:#999} th.sort-desc::after{content:" ↓";color:#999}
+.formname{font-weight:600;color:#111;font-size:15px;text-decoration:none}
+a.formname{color:var(--accent);transition:opacity .15s ease}
+a.formname:hover{opacity:.75;text-decoration:underline}
+.mini{display:block;height:6px;width:120px;background:#EEE;border-radius:3px}
+.mini > span{display:block;height:100%;background:var(--accent);border-radius:3px} .footer{color:#888;font-size:13px;text-align:center;padding:calc(var(--space)*.75) 0}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;font-size:14px;color:#555}
+.pager button{border:1px solid var(--hair);background:#fff;border-radius:10px;padding:6px 10px;cursor:pointer}
+.pager button[disabled]{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<div class="section">
+  <div class="container">
+    <h1>Where customers feel the friction</h1>
+    <p class="sub">This report spotlights the moments that make <strong id="org-name">these</strong> forms hard to complete — attachments to chase, occasional notarizations, and conditional questions that raise uncertainty.</p>
+    <div class="stats">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="label">Total forms analyzed</div></div>
+      <div class="stat"><div class="num" id="stat-avg-complexity">0</div><div class="label">Average complexity score</div></div>
+      <div class="stat"><div class="num" id="stat-hardest-name">—</div><div class="label">Hardest form</div></div>
+      <div class="stat"><div class="num" id="stat-payment-total">—</div><div class="label">Total payment amounts</div></div>
+    </div>
+
+    <div class="hero-card" aria-label="What makes this hard">
+      <h2>What makes this hard</h2>
+      <div class="hards">
+        <div class="hard">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#C43D00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-8.49 8.49a6 6 0 11-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.9 9.9a2 2 0 11-2.83-2.83l8.49-8.49"></path></svg>
+          <div><strong>Attachment hunting</strong><span class="badge" id="badge-attachments">0% of forms</span>
+          <div class="note">Chasing proofs (certificates, letters, IDs) across offices is a common derail.</div></div>
+        </div>
+        <div class="hard">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#C43D00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7a3 3 0 116 0 3 3 0 01-6 0z"></path><path d="M5 22h14"></path><path d="M4 18h16a1 1 0 001-1v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2a1 1 0 001 1z"></path></svg>
+          <div><strong>Notary bottlenecks</strong><span class="badge" id="badge-notary">0% require in-person steps</span>
+          <div class="note">Even small percentages create friction for citizens without easy access to notaries.</div></div>
+        </div>
+        <div class="hard">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#C43D00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v6a4 4 0 004 4h4"></path><circle cx="6" cy="3" r="2"></circle><circle cx="14" cy="13" r="2"></circle><circle cx="18" cy="21" r="2"></circle><path d="M14 15v4a2 2 0 002 2"></path></svg>
+          <div><strong>Conditional confusion</strong><span class="badge" id="badge-conditional">0% include branching</span>
+          <div class="note">“If this, then that” logic raises error risk and NIGO returns when people misread paths.</div></div>
+        </div>
+        <div class="hard">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#C43D00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"></path></svg>
+          <div><strong>High identification burden</strong><span class="badge" id="badge-pii">0% request ID/PII</span>
+          <div class="note">Sensitive details create pause and slow completion when citizens don’t have documents on hand.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider container" role="separator" aria-hidden="true"></div>
+
+<div class="section">
+  <div class="container">
+    <div class="controls">
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="searchInput" type="search" placeholder="Search by form name, vertical, or notes…" />
+      </div>
+      <div class="quickfilters" aria-label="Quick filters">
+        <button class="qf" data-filter="Attachments">Attachments</button>
+        <button class="qf" data-filter="Notary">Notary</button>
+        <button class="qf" data-filter="Conditional">Conditional</button>
+        <button class="qf" data-filter="PII">ID/PII</button>
+        <button class="qf" data-filter="Payment">Payment</button>
+        <button class="qf" data-reset>Reset</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-inner">
+        <table id="allFormsTable" aria-describedby="tableHelp">
+          <thead>
+            <tr>
+              <th data-col="form">Form Name</th>
+              <th data-col="complexity">Complexity Score</th>
+              <th data-col="nigo">NIGO Score</th>
+              <th data-col="notary">Notarization</th>
+              <th data-col="attachments">Attachments</th>
+              <th data-col="payment">Payment Required</th>
+              <th data-col="payment_amount">Payment Amount</th>
+              <th data-col="validation">Data Validation</th>
+              <th data-col="dependencies">Dependencies</th>
+              <th data-col="requirements">Key Requirements</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button id="prevBtn" disabled>Prev</button>
+        <span id="pageInfo">Page 1</span>
+        <button id="nextBtn">Next</button>
+      </div>
+    </div>
+
+    <p id="tableHelp" style="color:#777;font-size:13px;margin-top:10px;">
+      Tip: Click a header to sort. Use quick filters to show forms that include those friction drivers. Search matches across name, vertical, and notes.
+    </p>
+  </div>
+</div>
+
+<div class="footer">Generated from <span id="footer-org">Form</span> analysis • Designed for clarity & empathy</div>
+
+<!--__DATA__-->
+
+<script defer>
+(function(){
+  // Backend injects data via window.__REPORT_ROWS__
+  const rows = window.__REPORT_ROWS__ || [];
+  const PAGE_SIZE = 100;
+  let page = 1;
+  let activeFilter = null;
+  let sortState = { col: 1, dir: -1, numeric: true }; // Sort by Complexity Score (col 1) descending
+  let query = "";
+
+  const table = document.getElementById('allFormsTable');
+  const tbody = table.querySelector('tbody');
+  const headers = Array.from(table.querySelectorAll('thead th'));
+  const searchInput = document.getElementById('searchInput');
+  const qfs = Array.from(document.querySelectorAll('.qf'));
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const pageInfo = document.getElementById('pageInfo');
+
+  function yn(b) { return b ? 'Yes' : 'No'; }
+  function escapeHTML(s) { return (s+'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]); }
+
+  function getKeyRequirements(r) {
+    // Build a summary of key requirements from the form data
+    const reqs = [];
+    if (r.signature_count > 0 || (r.signature_analysis && r.signature_analysis.signature_count > 0)) {
+      const sigCount = r.signature_count || r.signature_analysis.signature_count;
+      reqs.push(`${sigCount} signature${sigCount > 1 ? 's' : ''}`);
+    }
+    if (r.notarization_required) reqs.push('Notarization');
+    if (r.witnesses_required) reqs.push('Witnesses');
+    if (r.attachments_required) {
+      const attCount = r.attachment_count || '';
+      reqs.push(attCount ? `${attCount} attachment${attCount > 1 ? 's' : ''}` : 'Attachments');
+    }
+    if (r.identification_required) reqs.push('ID verification');
+    if (r.conditional_logic) reqs.push('Conditional logic');
+    return reqs.join(', ') || '—';
+  }
+
+  function hasValidation(r) {
+    // Check for data validation requirements
+    if (r.field_analysis && r.field_analysis.validation_rules) return true;
+    if (r.field_types && Object.keys(r.field_types).some(k => k.includes('validation'))) return true;
+    if (r.has_calculations || r.javascript_present) return true;
+    return false;
+  }
+
+  function rowHTML(r) {
+    // Extract data from object properties
+    // Get the best available title
+    let name = r.pretty_title || '';
+
+    // If no pretty_title, try to extract a better name from filename
+    if (!name || name === 'N/A') {
+      const sourceUrl = r.source_url || '';
+      if (sourceUrl) {
+        // Extract filename from URL
+        const filename = sourceUrl.split('/').pop().split('?')[0];
+        // Clean up filename: remove extension, replace hyphens/underscores with spaces, title case
+        name = filename
+          .replace(/\.(pdf|PDF)$/, '')
+          .replace(/[-_]/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+      }
+      // Final fallback to form_name
+      if (!name) {
+        name = r.form_name || '';
+      }
+    }
+
+    const sourceUrl = r.source_url || '';
+    const comp = r.complexity_score;
+    const nigo = r.nigo_score;
+    const notary = r.notarization_required || r.witnesses_required;
+    const att = r.attachments_required;
+    const payment = r.payment_required;
+    const paymentAmount = r.payment_amount;
+    const validation = hasValidation(r);
+    const dependencies = r.conditional_logic;
+    const requirements = getKeyRequirements(r);
+
+    const compBar = (typeof comp === 'number' && !isNaN(comp)) ? `<span class="mini"><span style="width:${Math.min(100, Math.max(0, comp))}%"></span></span> <span style="font-size:13px;color:#666;margin-left:6px;">${Math.round(comp)}</span>` : '—';
+    const nigoBar = (typeof nigo === 'number' && !isNaN(nigo)) ? `<span class="mini"><span style="width:${Math.min(100, Math.max(0, nigo))}%"></span></span> <span style="font-size:13px;color:#666;margin-left:6px;">${Math.round(nigo)}</span>` : '—';
+    const paymentAmountDisplay = (typeof paymentAmount === 'number' && !isNaN(paymentAmount)) ? `$${paymentAmount.toFixed(2)}` : '—';
+
+    // Make form name a clickable link to the source PDF
+    const formNameHTML = sourceUrl
+      ? `<a href="${escapeHTML(sourceUrl)}" target="_blank" rel="noopener" class="formname">${escapeHTML(name || '')}</a>`
+      : `<span class="formname">${escapeHTML(name || '')}</span>`;
+
+    return `<tr>
+      <td>${formNameHTML}</td>
+      <td>${compBar}</td>
+      <td>${nigoBar}</td>
+      <td>${yn(!!notary)}</td>
+      <td>${yn(!!att)}</td>
+      <td>${yn(!!payment)}</td>
+      <td>${paymentAmountDisplay}</td>
+      <td>${yn(validation)}</td>
+      <td>${yn(!!dependencies)}</td>
+      <td>${escapeHTML(requirements)}</td>
+    </tr>`;
+  }
+
+  function filteredRows() {
+    return rows.filter(r => {
+      if (query) {
+        // Search across all text fields in the object
+        const searchFields = [
+          r.form_name || '',
+          r.pretty_title || '',
+          r.entity_name || '',
+          r.industry_vertical || '',
+          r.action_type || '',
+          r.complexity_drivers || ''
+        ];
+        const hay = searchFields.join(' ').toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
+      if (activeFilter) {
+        // Map filter names to object properties
+        const filterMap = {
+          'Attachments': r.attachments_required,
+          'Notary': r.notarization_required,
+          'Conditional': r.conditional_logic,
+          'PII': r.identification_required,
+          'Payment': r.payment_required
+        };
+        if (!filterMap[activeFilter]) return false;
+      }
+      return true;
+    });
+  }
+
+  function sortRows(arr) {
+    if (sortState.col == null) return arr;
+    const col = sortState.col;
+    const dir = sortState.dir;
+    const numeric = sortState.numeric;
+
+    // Map column index to object property
+    const colMap = [
+      'form_name',             // 0: Form name
+      'complexity_score',      // 1: Complexity Score
+      'nigo_score',            // 2: NIGO Score
+      'notarization_required', // 3: Notarization
+      'attachments_required',  // 4: Attachments
+      'payment_required',      // 5: Payment Required
+      'payment_amount',        // 6: Payment Amount
+      null,                    // 7: Data Validation (computed)
+      'conditional_logic',     // 8: Dependencies
+      null                     // 9: Key Requirements (computed)
+    ];
+
+    const propName = colMap[col];
+
+    const sorted = arr.slice().sort((a,b) => {
+      const A = a[propName], B = b[propName];
+      if (numeric) {
+        const nA = (typeof A === 'number') ? A : parseFloat(A)||0;
+        const nB = (typeof B === 'number') ? B : parseFloat(B)||0;
+        return (nA - nB) * dir;
+      }
+      const sA = (A==null?'':A+'').toLowerCase();
+      const sB = (B==null?'':B+'').toLowerCase();
+      return sA.localeCompare(sB) * dir;
+    });
+    return sorted;
+  }
+
+  function render() {
+    const base = filteredRows();
+    const arr = sortRows(base);
+    const totalPages = Math.max(1, Math.ceil(arr.length / PAGE_SIZE));
+    if (page > totalPages) page = totalPages;
+    const start = (page-1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const slice = arr.slice(start, end);
+    tbody.innerHTML = slice.map(rowHTML).join('');
+    pageInfo.textContent = `Page ${page} / ${totalPages} (${arr.length} shown)`;
+    prevBtn.disabled = (page <= 1);
+    nextBtn.disabled = (page >= totalPages);
+  }
+
+
+  // Calculate dynamic stats from data
+  function calculateStats() {
+    const total = rows.length;
+    if (total === 0) return;
+
+    // Calculate average complexity and find hardest form
+    let sumComplexity = 0;
+    let hardestForm = null;
+    let maxComplexity = -1;
+    let countPII = 0;
+    let countAttachments = 0;
+    let countNotary = 0;
+    let countConditional = 0;
+
+    let totalPaymentAmount = 0;
+
+    rows.forEach(r => {
+      // Complexity tracking
+      const complexity = r.complexity_score;
+      if (typeof complexity === 'number') {
+        sumComplexity += complexity;
+        if (complexity > maxComplexity) {
+          maxComplexity = complexity;
+          hardestForm = r;
+        }
+      }
+
+      // Track friction factors for badges
+      if (r.identification_required) countPII++;
+      if (r.attachments_required) countAttachments++;
+      if (r.notarization_required) countNotary++;
+      if (r.conditional_logic) countConditional++;
+
+      // Track payment amounts
+      const amount = r.payment_amount;
+      if (typeof amount === 'number' && !isNaN(amount)) {
+        totalPaymentAmount += amount;
+      }
+    });
+
+    const avgComplexity = Math.round(sumComplexity / total);
+    const pctPII = Math.round((countPII / total) * 100);
+    const pctAttachments = Math.round((countAttachments / total) * 100);
+    const pctNotary = Math.round((countNotary / total) * 10) / 10; // One decimal place
+    const pctConditional = Math.round((countConditional / total) * 100);
+
+    // Update stats displays
+    const el = (id) => document.getElementById(id);
+    el('stat-total').textContent = total;
+    el('stat-avg-complexity').textContent = avgComplexity;
+
+    if (hardestForm) {
+      // Prefer pretty_title for hardest form display
+      const formName = hardestForm.pretty_title || hardestForm.form_name || 'Unnamed';
+      el('stat-hardest-name').textContent = `${formName} (${Math.round(maxComplexity)})`;
+    }
+
+    // Update payment total
+    el('stat-payment-total').textContent = totalPaymentAmount > 0
+      ? '$' + totalPaymentAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+      : '—';
+
+    // Update badges in "What makes this hard" section
+    el('badge-attachments').textContent = pctAttachments + '% of forms';
+    el('badge-notary').textContent = pctNotary + '% require in-person steps';
+    el('badge-conditional').textContent = pctConditional + '% include branching';
+    el('badge-pii').textContent = pctPII + '% request ID/PII';
+
+    // Detect industry type to determine user terminology
+    let publicSectorCount = 0;
+    let creditUnionCount = 0;
+    let healthcareProviderCount = 0;
+    let healthcarePayerCount = 0;
+
+    rows.forEach(r => {
+      const vertical = (r.industry_vertical || '').toLowerCase();
+      const subvertical = (r.industry_subvertical || '').toLowerCase();
+      const entity = (r.entity_name || '').toLowerCase();
+
+      // Public Sector detection
+      if (vertical.includes('public sector') || vertical.includes('government') ||
+          entity.includes('.gov') || entity.includes('federal') || entity.includes('state ')) {
+        publicSectorCount++;
+      }
+
+      // Credit Union detection (Banking sub-vertical)
+      if ((vertical.includes('financial') && subvertical.includes('banking')) ||
+          entity.includes('credit union') || entity.includes('creditunion') ||
+          entity.includes('cu.org') || entity.includes('fcu')) {
+        creditUnionCount++;
+      }
+
+      // Healthcare Provider detection
+      if (vertical.includes('healthcare') && subvertical.includes('provider')) {
+        healthcareProviderCount++;
+      }
+
+      // Healthcare Payer / Insurance detection (more comprehensive)
+      if (
+        // Healthcare Payer vertical
+        (vertical.includes('healthcare') && subvertical.includes('payer')) ||
+        // Insurance in vertical or subvertical
+        vertical.includes('insurance') ||
+        subvertical.includes('insurance') ||
+        // Common insurance company patterns
+        entity.includes('insurance') ||
+        entity.includes('blue cross') ||
+        entity.includes('blue shield') ||
+        entity.includes('bcbs') ||
+        entity.includes('aetna') ||
+        entity.includes('cigna') ||
+        entity.includes('humana') ||
+        entity.includes('kaiser') ||
+        entity.includes('anthem') ||
+        entity.includes('united health') ||
+        entity.includes('unitedhealthcare') ||
+        // Life insurance companies
+        entity.includes('metlife') ||
+        entity.includes('prudential') ||
+        entity.includes('new york life') ||
+        entity.includes('northwestern mutual') ||
+        // Property & casualty
+        entity.includes('allstate') ||
+        entity.includes('state farm') ||
+        entity.includes('geico') ||
+        entity.includes('progressive') ||
+        entity.includes('liberty mutual') ||
+        entity.includes('travelers') ||
+        // Healthcare specific
+        vertical.includes('health') && (subvertical.includes('insurance') || entity.includes('insurance'))
+      ) {
+        healthcarePayerCount++;
+      }
+    });
+
+    // Determine user type based on majority (more than half)
+    let userType = 'customers'; // default
+    const halfTotal = total / 2;
+
+    if (publicSectorCount > halfTotal) {
+      userType = 'citizens';
+    } else if (creditUnionCount > halfTotal) {
+      userType = 'members';
+    } else if (healthcareProviderCount > halfTotal) {
+      userType = 'patients';
+    } else if (healthcarePayerCount > halfTotal) {
+      userType = 'insured';
+    }
+
+    // Extract organization name from most common entity in data
+    const orgCounts = {};
+    rows.forEach(r => {
+      // Use entity_name or industry_vertical property
+      const entity = r.entity_name || r.industry_vertical || '';
+      if (entity) {
+        // Handle both simple strings and hierarchical paths
+        const parts = entity.split('/').map(p => p.trim());
+        const org = parts.length > 1 ? parts[parts.length - 1] : entity;
+        orgCounts[org] = (orgCounts[org] || 0) + 1;
+      }
+    });
+
+    let orgName = 'these';
+    let maxCount = 0;
+    for (const [org, count] of Object.entries(orgCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        orgName = org;
+      }
+    }
+
+    // Update heading with appropriate user type
+    const heading = document.querySelector('h1');
+    if (heading) {
+      heading.textContent = `Where ${userType} feel the friction`;
+    }
+
+    // Map userType to singular form for page title
+    const userTypeMap = {
+      'citizens': 'Citizen',
+      'members': 'Member',
+      'patients': 'Patient',
+      'insured': 'Insured',
+      'customers': 'Customer'
+    };
+    const singularUserType = userTypeMap[userType] || 'Customer';
+
+    // Update organization name throughout
+    el('org-name').textContent = orgName;
+    el('footer-org').textContent = orgName;
+    el('page-title').textContent = orgName + ` Forms — ${singularUserType} Friction & Full Results (Optimized)`;
+  }
+  
+  // Initialize stats on load
+  calculateStats();
+  
+  // Set initial sort state on table header
+  headers.forEach((h, i) => {
+    if (i === sortState.col) {
+      h.classList.add(sortState.dir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+
+  headers.forEach((th, i) => {
+    const key = th.dataset.col || '';
+    const numeric = ['complexity','nigo'].includes(key);
+    th.addEventListener('click', () => {
+      if (sortState.col === i) sortState.dir = -sortState.dir;
+      else sortState = { col: i, dir: 1, numeric };
+      headers.forEach(h => h.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(sortState.dir === 1 ? 'sort-asc' : 'sort-desc');
+      page = 1;
+      render();
+    });
+  });
+
+  let t = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      query = (searchInput.value||'').toLowerCase();
+      page = 1;
+      render();
+    }, 120);
+  });
+
+  qfs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.hasAttribute('data-reset')) {
+        activeFilter = null;
+        qfs.forEach(b => b.classList.remove('active'));
+      } else {
+        const val = btn.getAttribute('data-filter');
+        if (activeFilter === val) { activeFilter = null; btn.classList.remove('active'); }
+        else { activeFilter = val; qfs.forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+      }
+      page = 1;
+      render();
+    });
+  });
+
+  const init = () => render();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+</body>
+</html>

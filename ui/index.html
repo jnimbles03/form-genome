@@ -1,0 +1,2462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="pragma" content="no-cache"/>
+<meta http-equiv="expires" content="0"/>
+<title>The Form Genome Project</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30 20 Q35 25 40 20 L40 30 Q35 35 30 30 Z M60 20 Q65 25 70 20 L70 30 Q65 35 60 30 Z M40 20 L60 30 M30 30 L70 20 M30 40 Q35 45 40 40 L40 50 Q35 55 30 50 Z M60 40 Q65 45 70 40 L70 50 Q65 55 60 50 Z M40 40 L60 50 M30 50 L70 40 M30 60 Q35 65 40 60 L40 70 Q35 75 30 70 Z M60 60 Q65 65 70 60 L70 70 Q65 75 60 70 Z M40 60 L60 70 M30 70 L70 60 M30 80 Q35 85 40 80 M60 80 Q65 85 70 80 M40 80 L60 90 M30 90 L70 80' fill='none' stroke='%2376e0a6' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06080e;--ink:#e8eef6;--muted:#a7b3ca;--hair:#243147;--card:#1f2f46;--panel:#0f1623;--accent:#76e0a6;--radius:14px;--radius-lg:18px;--shadow:0 10px 30px rgba(0,0,0,.25)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+
+/* Layout */
+header{padding:20px 20px 20px}
+.wrap{max-width:1260px;margin:0 auto}
+.header-row{display:flex;justify-content:space-between;align-items:center}
+.section-pad{padding:20px}
+.full-width{max-width:none;width:100%;padding:0 20px}
+
+/* Typography */
+h1{font-size:32px;font-weight:500;margin:0;color:var(--accent);text-shadow:0 2px 4px rgba(0,0,0,.4),0 4px 8px rgba(0,0,0,.2);font-family:'Orbitron',system-ui,sans-serif;letter-spacing:.5px}
+h2,h3{margin:0}
+
+/* Buttons */
+.btn{appearance:none;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px;letter-spacing:.2px;cursor:pointer;border:1px solid var(--hair);color:var(--ink);background:var(--card);transition:all .15s ease;text-decoration:none}
+.btn:hover{background:#263648}
+.btn.primary{background:var(--accent);color:#0b1218;border:none;font-weight:700}
+.btn.primary:hover{background:#85e9b1}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Input section */
+.input-section{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:20px;margin-bottom:20px;box-shadow:var(--shadow)}
+.input-grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media (max-width:900px){.input-grid{grid-template-columns:1fr}}
+#urlBox{width:100%;min-height:120px;resize:vertical;background:var(--card);border:1px solid var(--hair);color:var(--ink);padding:10px 12px;border-radius:12px;font-family:inherit;font-size:13px}
+.dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;padding:12px;border:2px dashed var(--hair);border-radius:12px;background:var(--panel);min-height:120px;font-size:14px}
+.dropzone.drag{border-color:var(--accent)}
+
+/* Progress */
+.progress-row{display:none;margin-top:16px}
+.progress{width:100%;height:10px;border-radius:999px;background:var(--panel);border:1px solid var(--hair);overflow:hidden}
+.progress>.bar{height:100%;width:0%;background:var(--accent);transition:width .25s ease}
+
+/* Log */
+.log-box{margin-top:10px;padding:10px 12px;background:var(--panel);border:1px solid var(--hair);border-radius:8px;font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);min-height:60px;max-height:120px;overflow-y:auto}
+
+/* Donuts */
+.donuts{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin:24px 0}
+@media (max-width:1100px){.donuts{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.donuts{grid-template-columns:1fr}}
+.donut{display:flex;flex-direction:column;gap:16px;align-items:center;padding:24px;border:1px solid var(--hair);border-radius:14px;background:var(--panel)}
+.donut h4{margin:0;color:var(--ink);font-size:16px;font-weight:600;text-align:center}
+.donut .legend{display:flex;flex-direction:column;gap:10px;width:100%}
+.donut .legend .row{display:flex;gap:10px;align-items:center;justify-content:center;font-weight:600;font-size:14px}
+.dot{width:16px;height:16px;border-radius:50%}
+.dot.yes{background:var(--accent)} .dot.no{background:var(--muted)}
+canvas.donut-canvas{width:280px;height:280px}
+
+/* Table */
+.table-wrap{display:none;margin-top:10px;border-radius:14px;border:1px solid var(--hair);overflow:auto;max-height:calc(100vh - 400px);box-shadow:var(--shadow);cursor:grab;
+/* Hide scrollbars but keep functionality */
+scrollbar-width:none;-ms-overflow-style:none;
+/* Smooth scrolling */
+scroll-behavior:smooth;
+/* Scroll shadow gradients for intuitive horizontal scrolling */
+background:linear-gradient(90deg,var(--panel) 30%,rgba(15,22,35,0)) left,linear-gradient(90deg,rgba(15,22,35,0),var(--panel) 70%) right,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,0.5),transparent) left,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,0.5),transparent) right;
+background-repeat:no-repeat;
+background-size:40px 100%,40px 100%,14px 100%,14px 100%;
+background-attachment:local,local,scroll,scroll}
+.table-wrap::-webkit-scrollbar{display:none}
+.table-wrap:active{cursor:grabbing}
+.table-controls{position:sticky;top:0;z-index:15;padding:12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--hair);background:var(--card)}
+table{border-collapse:separate;border-spacing:0;width:auto !important;min-width:1200px;table-layout:fixed;white-space:nowrap}
+thead th{position:sticky;top:48px;z-index:10;background:var(--card);border-bottom:1px solid var(--hair);color:var(--ink);font-size:10px;letter-spacing:.2px;text-transform:uppercase;padding:6px 6px;user-select:none;white-space:normal !important;word-break:keep-all;overflow-wrap:break-word;line-height:1.3;height:auto;min-width:96px;text-align:center}
+thead th:first-child{position:sticky;left:0;top:48px;z-index:20;text-align:left;background:var(--card);box-shadow:2px 0 4px rgba(0,0,0,0.1)}
+tbody td{padding:5px 6px;border-bottom:1px solid var(--hair);color:var(--ink);vertical-align:top;text-align:center;font-size:10px}
+tbody td:first-child{position:sticky;left:0;z-index:10;text-align:left;background:var(--panel);box-shadow:2px 0 4px rgba(0,0,0,0.05)}
+tbody tr:nth-child(2n) td:first-child{background:var(--panel)}
+tbody tr:hover td:first-child{background:var(--card)}
+tbody td.titleCell,tbody td.left-align{text-align:left !important}
+tbody tr:hover{background:var(--card)}
+tbody tr:nth-child(2n){background:var(--panel)}
+tbody tr:nth-child(2n):hover{background:var(--card)}
+
+/* drag reorder + resize */
+th.draggable{cursor:grab} th.dragging{opacity:.65}
+th .resize{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:3}
+
+/* Checkbox column */
+th.checkbox-col,td.checkbox-col{width:40px;min-width:40px;text-align:center}
+
+/* Cells */
+.titleCell{max-width:none;width:auto}
+.titleText{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.3;font-weight:500;color:var(--ink);letter-spacing:0.01em}
+.langChip{margin-left:6px;padding:0 6px;border-radius:10px;background:var(--card);color:var(--accent);font-size:11px;display:inline-block}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px}
+.chip.yes{background:#0f2419;color:var(--accent);border:1px solid #1d5a33}
+.chip.no{background:var(--panel);color:var(--muted);border:1px solid var(--hair)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Expandable rows */
+.expand-cell{width:32px;min-width:32px;text-align:center;cursor:pointer;user-select:none}
+.expand-icon{display:inline-block;transition:transform 0.2s ease;font-size:14px;color:var(--muted)}
+.expand-icon:hover{color:var(--accent)}
+.expand-icon.expanded{transform:rotate(90deg)}
+tr.detail-row{display:none}
+tr.detail-row.show{display:table-row}
+tr.detail-row td{padding:16px 24px !important;background:var(--card) !important;border-bottom:2px solid var(--hair) !important}
+tr.detail-row .detail-content{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left}
+tr.detail-row .detail-section{display:flex;flex-direction:column;gap:8px}
+tr.detail-row .detail-label{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;color:var(--accent)}
+tr.detail-row .detail-value{font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+
+/* Data bars */
+.databar-cell{position:relative;padding:2px 6px !important;min-width:100px}
+.databar-bg{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(118,224,166,0.15) 0%,rgba(118,224,166,0.05) 100%);border-radius:4px;transition:width .3s ease}
+.databar-value{position:relative;z-index:1;font-variant-numeric:tabular-nums;font-weight:600;font-size:11px;color:var(--ink)}
+
+/* Filter UI */
+.filter-icon{display:inline-block;margin-left:4px;opacity:.5;cursor:pointer;font-size:10px;transition:opacity .15s}
+.filter-icon:hover{opacity:1}
+.filter-icon.active{opacity:1;color:var(--accent)}
+.filter-dropdown{position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:10px;min-width:200px;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:100;display:none}
+.filter-dropdown.show{display:block}
+.filter-dropdown label{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;font-size:12px;text-transform:none}
+.filter-dropdown input[type="checkbox"]{cursor:pointer}
+.filter-dropdown input[type="text"],.filter-dropdown input[type="number"]{width:100%;padding:6px 8px;border:1px solid var(--hair);border-radius:6px;background:var(--panel);color:var(--ink);font-size:12px;margin-top:4px}
+.filter-dropdown .filter-actions{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}
+.filter-dropdown .filter-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--hair);background:var(--panel);color:var(--ink);font-size:11px;cursor:pointer;flex:1}
+.filter-dropdown .filter-btn:hover{background:var(--hair)}
+
+/* Sort UI */
+.sort-icon{display:inline-block;margin-left:4px;opacity:.3;cursor:pointer;font-size:10px;transition:opacity .15s;user-select:none}
+.sort-icon:hover{opacity:.7}
+.sort-icon.active{opacity:1;color:var(--accent)}
+
+th{position:relative}
+
+/* Orbs */
+#orbsCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.75}
+header,main{position:relative;z-index:1}
+
+/* Footer */
+footer{position:relative;z-index:1;text-align:center;padding:20px 30px 20px 20px;color:var(--muted);font-size:11px;opacity:0.6;font-weight:400}
+footer a img:hover{opacity:1}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius-lg);max-width:600px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:modalSlide 0.2s ease-out}
+@keyframes modalSlide{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:24px 24px 16px;border-bottom:1px solid var(--hair)}
+.modal-header h2{margin:0;font-size:24px;color:var(--accent);font-weight:600}
+.modal-body{padding:20px 24px}
+.modal-body p{margin:0 0 16px;line-height:1.6;color:var(--muted)}
+.modal-body ul{margin:8px 0 16px;padding-left:24px;color:var(--muted);line-height:1.8}
+.modal-body ul li{margin:4px 0}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--hair);display:flex;gap:12px;justify-content:flex-end}
+.modal-footer .btn{min-width:120px}
+.duplicate-list{margin:12px 0;padding:12px;background:var(--panel);border:1px solid var(--hair);border-radius:8px;max-height:200px;overflow-y:auto}
+.duplicate-item{padding:6px 0;color:var(--ink);font-size:13px;border-bottom:1px solid var(--hair)}
+.duplicate-item:last-child{border-bottom:none}
+</style>
+<script src="https://unpkg.com/scrollbooster@3/dist/scrollbooster.min.js"></script>
+</head>
+<body>
+<canvas id="orbsCanvas"></canvas>
+
+<header>
+  <div class="wrap header-row">
+    <div>
+      <h1>The Form Genome Project</h1>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px;opacity:0.8">Find revenue opportunities. Identify expense reduction. Audit compliance.</div>
+    </div>
+    <nav>
+      <a class="btn primary" href="/genetics">Global Genetics</a>
+      <a class="btn ghost" href="/infographic" target="_blank" rel="noopener">Methodology</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Input section -->
+  <section class="input-section wrap section-pad">
+    <h2 style="margin:0 0 12px 0">Analyze Forms</h2>
+    <form onsubmit="return false;" autocomplete="off">
+      <div class="input-grid">
+        <div>
+          <textarea id="urlBox" placeholder="Paste PDF URLs or page URLs to crawl (one per line)" autocomplete="off"></textarea>
+          <div style="font-size:13px;color:var(--muted);margin-top:6px">Tip: Copy links from any website — we'll auto-extract the URLs</div>
+        </div>
+        <div class="dropzone" id="dropZone">
+          <div>Drag n' drop...it like it's hot...</div>
+          <div style="font-size:12px;color:var(--muted)">or use Ctrl+V / Cmd+V anywhere</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:16px;align-items:center;flex-wrap:wrap">
+        <button id="analyzeBtn" class="btn primary" type="button">🔍 Find All Forms</button>
+        <button id="stopCrawlBtn" class="btn" type="button" style="display:none;background:#d84315;color:#fff;border:none">⏹ Stop & Analyze</button>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);cursor:pointer;user-select:none">
+          <input type="checkbox" id="analyzeOnlyMode" style="cursor:pointer;width:16px;height:16px">
+          <span>Analyze Only (Skip Crawling)</span>
+        </label>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:rgba(118,224,166,0.1);border-radius:8px;font-size:13px;line-height:1.6;color:var(--muted)">
+        Enter a domain (e.g., <strong>https://example.com</strong>) or paste specific form URLs. The system will intelligently search the entire domain using Google + targeted crawling to find ALL forms automatically.
+      </div>
+    </form>
+    <div class="progress-row" id="progressRow">
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Processing <span id="progressCurrent">0</span> of <span id="progressTotal">0</span></div>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </section>
+
+  <!-- Donut charts with configuration -->
+  <div class="full-width">
+    <div class="donuts" id="charts" style="display:none">
+      <div class="donut">
+        <h4 id="d1Title">Action Type</h4>
+        <canvas id="d1" class="donut-canvas" width="280" height="280"></canvas>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d1Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d1No">0%</strong></span></div>
+        </div>
+      </div>
+      <div class="donut">
+        <h4 id="d2Title">Identification</h4>
+        <canvas id="d2" class="donut-canvas" width="280" height="280"></canvas>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d2Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d2No">0%</strong></span></div>
+        </div>
+      </div>
+      <div class="donut">
+        <h4 id="d3Title">Attachments</h4>
+        <canvas id="d3" class="donut-canvas" width="280" height="280"></canvas>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d3Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d3No">0%</strong></span></div>
+        </div>
+      </div>
+      <div class="donut" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+        <h4 style="margin:0 0 16px;font-size:16px;color:var(--ink);font-weight:600;">Total Payment Fees</h4>
+        <div id="d4Amount" style="font-size:48px;font-weight:700;color:var(--accent);font-family:'Orbitron',system-ui,sans-serif;margin:16px 0;">$0</div>
+        <div id="d4Count" style="font-size:14px;color:var(--muted);margin-top:6px;">0 forms with fees</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="full-width">
+    <div id="tableWrap" class="table-wrap">
+    <div class="table-controls">
+      <div style="font-size:14px;font-weight:600">Forms Found: <span id="foundCount">0</span></div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="adaCheckbox" style="cursor:pointer">
+          <span>Include ADA Compliance</span>
+        </label>
+        <button id="reportBtn" class="btn primary">Generate Report from Selection</button>
+        <button id="csvBtn" class="btn">Export CSV</button>
+      </div>
+    </div>
+    <table id="grid">
+      <colgroup id="colgroup"></colgroup>
+      <thead><tr id="theadRow"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===== Orbs ===== */
+window.addEventListener('load', ()=>{
+  const c=document.getElementById('orbsCanvas'); if(!c) return;
+  const x=c.getContext('2d');
+  function rs(){ c.width=innerWidth; c.height=innerHeight; } rs(); addEventListener('resize',rs);
+  class O{ constructor(){ this.r=Math.random()*3+1; this.x=Math.random()*c.width; this.y=Math.random()*c.height; this.dx=(Math.random()-.5)*.6; this.dy=(Math.random()-.5)*.6; }
+    step(){ this.x+=this.dx; this.y+=this.dy; if(this.x<0||this.x>c.width)this.dx*=-1; if(this.y<0||this.y>c.height)this.dy*=-1; }
+    draw(){ const g=x.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*20); g.addColorStop(0,'#76e0a6'); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(this.x-this.r*20,this.y-this.r*20,this.r*40,this.r*40); } }
+  const orbs=[...Array(50)].map(()=>new O());
+  (function loop(){ x.clearRect(0,0,c.width,c.height); x.fillStyle='#06080e'; x.fillRect(0,0,c.width,c.height); orbs.forEach(o=>{o.step();o.draw();}); requestAnimationFrame(loop); })();
+});
+
+/* ===== Helper functions ===== */
+function get(id){ return document.getElementById(id); }
+function log(msg){ 
+  const box = get('logBox'); 
+  if(box){
+    const line = document.createElement('div');
+    line.textContent = `[${new Date().toLocaleTimeString('en-US',{hour12:false})}] ${msg}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+/* ===== State ===== */
+let rows = [];
+let allRows = []; // Keep original unfiltered data
+let currentBatchStartTime = null; // Track current analysis batch for filtering
+let activeFilters = {}; // {columnKey: filterValue}
+let sortState = {column: 'complexity_score', direction: 'desc'}; // {column: key, direction: 'asc'|'desc'} - default sort by complexity desc
+let donutConfig = {
+  d1: 'action_type',
+  d2: 'notarization_required',
+  d3: 'conditional_logic',
+  d4: 'payment_total'
+};
+
+// Complete column definitions (synced with genetics.html)
+// Ordered: Entity, Vertical, Sub-Vertical, Scores, Form Title, Action Type, then by impact
+const COLS = [
+  {key:'_select',label:'Select',type:'checkbox',tooltip:'Select forms to include in analysis'},
+  {key:'_expand',label:'',type:'expand',tooltip:'Click to show key drivers and special requirements'},
+  {key:'entity_name',label:'Entity Name',type:'text',tooltip:'Organization or entity that owns the form'},
+  {key:'industry_vertical',label:'Industry Vertical',type:'text',tooltip:'Primary industry category (e.g., Financial Services, Healthcare, Government)'},
+  {key:'industry_subvertical',label:'Industry Sub-vertical',type:'text',tooltip:'More specific industry sub-category within the primary vertical'},
+  {key:'complexity_score',label:'Complexity Score',type:'databar',tooltip:'Overall operational difficulty score (0-100+) based on notarization, third-party involvement, witnesses, attachments, conditional logic, and field types'},
+  {key:'nigo_score',label:'NIGO Score',type:'databar',tooltip:'Not In Good Order risk score - probability of form rejection due to common errors (higher = higher rejection risk). Based on data validation, attachments, notarization, and field complexity'},
+  {key:'genome_rank',label:'Genome Rank',type:'rank',tooltip:'Percentile ranking of form complexity compared to all forms in the dataset'},
+  {key:'form_name',label:'Form Title',type:'title',tooltip:'Name or title of the form'},
+  {key:'action_type',label:'Action Type',type:'text',tooltip:'Category of form action (e.g., enrollment, application, consent)'},
+  {key:'notarization_required',label:'Notarization Required',type:'bool',tooltip:'Whether the form requires notary public verification or seal'},
+  {key:'third_party_involved',label:'Third Party Involved',type:'bool',tooltip:'Whether the form requires input from third parties (e.g., beneficiaries, trustees, physicians, attorneys)'},
+  {key:'witnesses_required',label:'Witnesses Required',type:'bool',tooltip:'Whether the form requires witness signatures'},
+  {key:'attachments_required',label:'Attachments Required',type:'bool',tooltip:'Whether the form requires additional documents or attachments to be submitted'},
+  {key:'identification_required',label:'ID Required',type:'bool',tooltip:'Whether the form requires government-issued ID or proof of identity (separate from notarization)'},
+  {key:'conditional_logic',label:'Conditional Logic',type:'bool',tooltip:'Whether the form contains conditional instructions (e.g., "If yes, check one", "Skip to section", "Complete only if")'},
+  {key:'deadlines_present',label:'Deadlines Present',type:'bool',tooltip:'Whether the form has specific time-sensitive requirements or filing deadlines'},
+  {key:'payment_required',label:'Payment Required',type:'bool',tooltip:'Whether the form requires a submission fee or payment'},
+  {key:'payment_amount',label:'Payment Amount',type:'num',tooltip:'Amount of required payment or fee'},
+  {key:'form_dependencies',label:'Form Dependencies',type:'bool',tooltip:'Whether this form references or requires other forms to be completed'},
+  {key:'special_requirements',label:'Special Requirements',type:'text',tooltip:'Unique form requirements not captured elsewhere (e.g., age requirements, residency/citizenship, eligibility criteria, enrollment periods, original documents, in-person submission, pre-approval, background checks, medical exams, professional licenses, spousal consent, specific submission methods)'},
+  {key:'key_drivers',label:'Key Drivers',type:'text',tooltip:'Primary factors driving form complexity (e.g., "Notarization Required", "Multiple Attachments", "Third-Party Coordination")'},
+  {key:'signature_analysis.signature_count',label:'Signatures',type:'num',tooltip:'Total number of signature fields detected in the form'},
+  {key:'field_count',label:'Field Count',type:'num',tooltip:'Total number of fillable fields (text fields, checkboxes, dropdowns, etc.)'},
+  {key:'text_fields',label:'Text Fields',type:'num',tooltip:'Number of free-text input fields'},
+  {key:'checkboxes',label:'Checkboxes',type:'num',tooltip:'Number of checkbox fields'},
+  {key:'dropdowns',label:'Dropdowns',type:'num',tooltip:'Number of dropdown selection fields'},
+  {key:'data_validation_fields',label:'Data Validation Fields',type:'num',tooltip:'Number of fields with specific format requirements (e.g., SSN, email, phone number) that increase NIGO risk'},
+  {key:'estimated_signer_time',label:'Estimated Signer Time',type:'num',tooltip:'Estimated time (in minutes) for a signer to complete the form'},
+  {key:'estimated_processing_time',label:'Estimated Processing Time',type:'num',tooltip:'Estimated time (in minutes) for administrative processing of the completed form'},
+  {key:'pages',label:'Pages',type:'num',tooltip:'Total number of pages in the form'},
+  {key:'language_count',label:'Language Count',type:'num',tooltip:'Number of different languages detected in the form'},
+  {key:'same_domain',label:'Same Domain',type:'bool',tooltip:'Whether the form originates from the same domain as the entity'},
+  {key:'timestamp',label:'Timestamp',type:'num',tooltip:'Date and time when the form was analyzed'},
+  {key:'source_url',label:'Source URL',type:'link',tooltip:'Original URL where the form was found'},
+  {key:'click_to_agree',label:'Click to Agree',type:'bool',tooltip:'Whether the form contains clickwrap or terms acceptance checkboxes'}
+];
+
+// Columns suitable for donuts (bool/categorizable)
+const DONUT_COLS = COLS.filter(c => 
+  c.type === 'bool' || 
+  c.key === 'action_type' || 
+  c.key === 'language_count' ||
+  c.key === 'industry_vertical' ||
+  c.key === 'industry_subvertical'
+);
+
+// Display columns (all columns visible, synced with genetics.html)
+let colOrder = [
+  'form_name',
+  '_select',
+  '_expand',
+  'entity_name',
+  'pages',
+  'complexity_score',
+  'nigo_score',
+  'signature_analysis.signature_count',
+  'attachments_required',
+  'notarization_required',
+  'conditional_logic',
+  'deadlines_present',
+  'third_party_involved',
+  'field_count',
+  'text_fields',
+  'checkboxes',
+  'dropdowns',
+  'language_count',
+  'estimated_signer_time',
+  'estimated_processing_time',
+  'action_type',
+  'same_domain',
+  'witnesses_required',
+  'identification_required',
+  'click_to_agree',
+  'payment_required',
+  'payment_amount',
+  'data_validation_fields',
+  'form_dependencies',
+  'industry_vertical',
+  'industry_subvertical',
+  'timestamp',
+  'source_url'
+];
+
+/* ===== Progress ===== */
+function showProgress(){ get('progressRow').style.display='block'; }
+function hideProgress(){ get('progressRow').style.display='none'; get('progressBar').style.width='0%'; }
+function updateProgress(current,total){
+  get('progressCurrent').textContent=current;
+  get('progressTotal').textContent=total;
+  get('progressBar').style.width=`${(current/total)*100}%`;
+}
+
+/* ===== API Helpers ===== */
+async function getJSON(url){
+  const r = await fetch(url);
+  if(!r.ok) {
+    // Try to get error message from response
+    let errorMsg = `HTTP ${r.status}`;
+    try {
+      const contentType = r.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await r.json();
+        errorMsg = errorData.error || errorMsg;
+      } else {
+        // Non-JSON response (HTML error page, etc.)
+        const text = await r.text();
+        errorMsg = text.substring(0, 200); // First 200 chars of error
+      }
+    } catch (e) {
+      // Failed to parse error, use status
+    }
+    throw new Error(errorMsg);
+  }
+
+  // Check if response is actually JSON before parsing
+  const contentType = r.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await r.text();
+    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+  }
+
+  return r.json();
+}
+
+/* ===== Google Search Mode Handler ===== */
+async function handleGoogleSearch(){
+  const input = get('urlBox').value.trim();
+  if(!input){
+    log('Please enter a domain or URL to search (e.g., https://example.com)');
+    return;
+  }
+
+  const urls = input.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(u=>/^https?:\/\//i.test(u));
+
+  if(urls.length === 0){
+    log('Please enter a valid URL starting with http:// or https://');
+    return;
+  }
+
+  if(urls.length > 1){
+    log('🔍 Google Search Mode: Please enter only ONE domain at a time');
+    return;
+  }
+
+  const searchUrl = urls[0];
+  const googleSearchBtn = get('googleSearchBtn');
+  const analyzeBtn = get('analyzeBtn');
+
+  try {
+    if(googleSearchBtn) googleSearchBtn.disabled = true;
+    if(analyzeBtn) analyzeBtn.disabled = true;
+
+    log(`🔍 Searching Google for ALL forms on ${searchUrl}...`);
+    log('⏳ Finding all forms across the domain (may take 30-90 seconds for large domains)...');
+    showProgress();
+
+    const crawlRes = await fetch('/api/crawl/google', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url: searchUrl })
+    });
+
+    // Check if response is JSON before parsing
+    const contentType = crawlRes.headers.get('content-type');
+    let crawlData;
+    if (contentType && contentType.includes('application/json')) {
+      crawlData = await crawlRes.json();
+    } else {
+      const text = await crawlRes.text();
+      throw new Error(`Server error: ${text.substring(0, 200)}`);
+    }
+
+    if(!crawlData.ok){
+      log(`❌ Error: ${crawlData.error || 'Unknown error'}`);
+      hideProgress();
+      if(googleSearchBtn) googleSearchBtn.disabled = false;
+      if(analyzeBtn) analyzeBtn.disabled = false;
+      return;
+    }
+
+    const foundUrls = crawlData.urls || [];
+    log(`✓ Found ${foundUrls.length} form(s) via exhaustive search in ${Math.round(crawlData.ms/1000)}s`);
+
+    if(foundUrls.length === 0){
+      log('No forms found. Try entering a different domain or use regular Analyze mode.');
+      hideProgress();
+      if(googleSearchBtn) googleSearchBtn.disabled = false;
+      if(analyzeBtn) analyzeBtn.disabled = false;
+      return;
+    }
+
+    // Now analyze all the discovered PDFs
+    log(`📊 Analyzing ALL ${foundUrls.length} form(s) automatically in parallel batches of 2...`);
+
+    let completed = 0;
+    const total = foundUrls.length;
+    const BATCH_SIZE = 2;
+    const BATCH_DELAY_MS = 3000; // 3 second delay between batches
+
+    let successCount = 0;
+    let failureCount = 0;
+    const recordIds = []; // Track IDs for auto-commit
+
+    for(let i = 0; i < foundUrls.length; i += BATCH_SIZE){
+      const batch = foundUrls.slice(i, i + BATCH_SIZE);
+      const promises = batch.map(async (pdfUrl) => {
+        try {
+          const res = await fetch('/api/analyze_pdf', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pdf_url: pdfUrl})
+          });
+
+          // Check if response is JSON before parsing
+          const contentType = res.headers.get('content-type');
+          let j;
+          if (contentType && contentType.includes('application/json')) {
+            j = await res.json();
+          } else {
+            // Server returned non-JSON (error page, plain text, etc.)
+            const text = await res.text();
+            throw new Error(`Server error: ${text.substring(0, 200)}`);
+          }
+
+          if(j.ok){
+            successCount++;
+            // Collect record ID for auto-commit
+            const recordId = j.id || j.sha1 || j._id;
+            if(recordId) recordIds.push(recordId);
+
+            if(j.is_actionable === false){
+              log(`⊘ ${pdfUrl} (filtered: ${j.filtered_reason || 'non-actionable'})`);
+            } else {
+              log(`✓ ${pdfUrl}`);
+            }
+          } else {
+            failureCount++;
+            log(`✗ ${pdfUrl}: ${j.error || 'Failed'}`);
+          }
+          return j;
+        } catch(err){
+          failureCount++;
+          log(`✗ ${pdfUrl}: ${err.message}`);
+          return {ok: false, error: String(err)};
+        }
+      });
+
+      await Promise.all(promises);
+      completed += batch.length;
+      updateProgress(completed, total);
+
+      // Batch summary log (every 10 forms or at end)
+      if(completed % 10 === 0 || completed === total){
+        log(`Progress: ${completed}/${total} analyzed (${successCount} success, ${failureCount} failed)`);
+      }
+
+      // Add delay between batches to prevent service overload
+      if(i + BATCH_SIZE < foundUrls.length){
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+    }
+
+    hideProgress();
+    log(`✅ Exhaustive search complete! Analyzed ${total} form(s): ${successCount} success, ${failureCount} failed`);
+
+    // Auto-commit all successfully analyzed forms
+    if(recordIds.length > 0){
+      log(`🔄 Auto-committing ALL ${recordIds.length} form(s) to Global Genetics...`);
+      try {
+        const commitRes = await fetch('/api/commit_records', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ids: recordIds})
+        });
+        const commitData = await commitRes.json();
+
+        if(commitData.ok){
+          log(`✅ Successfully committed ${commitData.committed_count} form(s) to Global Genetics!`);
+          log(`📊 View all forms at: /genetics`);
+
+          // Auto-download report after successful commit
+          log('📄 Generating comprehensive report...');
+          await generateReport();
+        } else {
+          log(`⚠ Auto-commit failed: ${commitData.error || 'Unknown error'}. Forms saved as uncommitted.`);
+        }
+      } catch(commitErr){
+        log(`⚠ Auto-commit failed: ${commitErr.message}. Forms saved as uncommitted.`);
+      }
+    }
+
+  } catch(err){
+    log(`❌ Error: ${err.message || err}`);
+    console.error('[GOOGLE_SEARCH]', err);
+    hideProgress();
+  } finally {
+    if(googleSearchBtn) googleSearchBtn.disabled = false;
+    if(analyzeBtn) analyzeBtn.disabled = false;
+  }
+}
+
+/* ===== Smart Analyze Handler (detects crawl vs direct analyze) ===== */
+async function handleAnalyze(){
+  const input = get('urlBox').value.trim();
+  if(!input){ log('Please paste some URLs'); return; }
+
+  const urls = input.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(u=>/^https?:\/\//i.test(u));
+
+  if(urls.length === 0){
+    log('No valid URLs found. Please enter URLs starting with http:// or https://');
+    return;
+  }
+
+  const analyzeBtn = get('analyzeBtn');
+
+  try {
+    // DISABLED: Automatic clearing was causing data loss on Cloud Run deployments
+    // Previous uncommitted results will now persist until explicitly committed or deleted
+    // Users can manually clear via "Clear Drafts" button if needed
+    //
+    // log('🧹 Clearing previous analysis results...');
+    // try {
+    //   const clearRes = await fetch('/api/maintenance/clear_uncommitted', { method: 'POST' });
+    //   const clearData = await clearRes.json();
+    //   if (clearData.deleted > 0) {
+    //     log(`✓ Cleared ${clearData.deleted} previous result(s)`);
+    //   }
+    // } catch (e) {
+    //   console.warn('[ANALYZE] Failed to clear uncommitted records:', e);
+    // }
+
+    // Detect: PDF URLs vs page URLs
+    const pdfUrls = urls.filter(u => u.toLowerCase().endsWith('.pdf'));
+    const pageUrls = urls.filter(u => !u.toLowerCase().endsWith('.pdf'));
+
+    // Check if "Analyze Only" mode is enabled
+    const analyzeOnlyMode = get('analyzeOnlyMode')?.checked || false;
+
+    // Warn user if analyze-only mode is on but they provided non-PDF URLs
+    if(analyzeOnlyMode && pageUrls.length > 0){
+      log(`⚠️ Analyze Only mode is enabled - skipping ${pageUrls.length} non-PDF URL(s)`);
+      log(`   Only analyzing ${pdfUrls.length} direct PDF URL(s)`);
+    }
+
+    // If only non-PDF URLs provided in analyze-only mode, show error
+    if(analyzeOnlyMode && pdfUrls.length === 0 && pageUrls.length > 0){
+      log('❌ Error: Analyze Only mode requires direct PDF URLs (.pdf)');
+      log('   Either uncheck "Analyze Only" to enable crawling, or provide PDF URLs');
+      if(analyzeBtn) analyzeBtn.disabled = false;
+      return;
+    }
+
+    if(analyzeBtn) analyzeBtn.disabled = true;
+
+  // Step 1: Crawl page URLs to discover PDFs (skip if analyze-only mode)
+  if(pageUrls.length > 0 && !analyzeOnlyMode){
+    log(`Crawling ${pageUrls.length} page(s) to discover forms...`);
+    log('⏳ This may take 30-90 seconds...');
+    showProgress();
+
+    let completed = 0;
+    const total = pageUrls.length;
+
+    for(const url of pageUrls){
+      log(`🔍 Crawling: ${url}`);
+
+      // Show heartbeat messages while waiting, with progress updates
+      let elapsed = 0;
+      const heartbeat = setInterval(async () => {
+        elapsed += 10;
+        try {
+          // Poll progress API to get form count
+          const progResp = await fetch('/api/progress');
+          if (progResp.ok) {
+            const progData = await progResp.json();
+            const pdfs = progData.crawl?.pdfs || 0;
+
+            // Show/hide stop button based on crawl status
+            const stopBtn = get('stopCrawlBtn');
+            if (stopBtn && progData.status === 'crawling') {
+              stopBtn.style.display = 'inline-block';
+            } else if (stopBtn) {
+              stopBtn.style.display = 'none';
+            }
+
+            // Show progress with more context
+            const status = progData.status || 'crawling';
+            const message = progData.message || '';
+
+            if (pdfs > 0) {
+              log(`⏳ Still searching... (${elapsed}s elapsed, ${pdfs} form${pdfs === 1 ? '' : 's'} found so far)`);
+            } else if (message && message.includes('CSE')) {
+              log(`⏳ Searching Google for forms... (${elapsed}s elapsed)`);
+            } else if (message && message.includes('LLM')) {
+              log(`⏳ Analyzing patterns with AI... (${elapsed}s elapsed)`);
+            } else if (message && message.includes('Crawling')) {
+              log(`⏳ Searching identified directories... (${elapsed}s elapsed)`);
+            } else {
+              log(`⏳ Still searching... (${elapsed}s elapsed)`);
+            }
+          } else {
+            log(`⏳ Still crawling... (${elapsed}s elapsed)`);
+          }
+        } catch {
+          log(`⏳ Still crawling... (${elapsed}s elapsed)`);
+        }
+      }, 10000); // Update every 10 seconds
+
+      try{
+        // 🍎 Apple Philosophy: Just send the URL, everything else is automatic
+        const r = await fetch('/api/crawl', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({url})
+        });
+
+        clearInterval(heartbeat); // Stop heartbeat when response arrives
+
+        if(!r.ok){
+          log(`✗ ${url}: Server error ${r.status}`);
+          completed++;
+          updateProgress(completed, total);
+          continue;
+        }
+
+        const j = await r.json();
+
+        if(j.urls && j.urls.length > 0){
+          log(`✓ ${url}: Found ${j.urls.length} forms`);
+          // Add discovered PDFs to the list
+          pdfUrls.push(...j.urls);
+        }else{
+          log(`⚠ ${url}: No forms found (reason: ${j.reason || 'unknown'})`);
+        }
+      }catch(e){
+        clearInterval(heartbeat); // Stop heartbeat on error
+        log(`✗ ${url}: ${e.message}`);
+      }
+
+      completed++;
+      updateProgress(completed, total);
+    }
+
+    hideProgress();
+
+    // Hide stop button when crawl completes
+    const stopBtn = get('stopCrawlBtn');
+    if (stopBtn) stopBtn.style.display = 'none';
+
+    if(pdfUrls.length === 0){
+      log('No PDFs discovered. Try different URLs.');
+      if(analyzeBtn) analyzeBtn.disabled = false;
+      return;
+    }
+  }
+
+  // Step 2: Analyze all PDF URLs (direct + discovered) in parallel batches
+  const uniquePdfs = [...new Set(pdfUrls)]; // Deduplicate
+  log(`Analyzing ${uniquePdfs.length} PDF(s) in parallel batches of 2...`);
+  showProgress();
+
+  let completed = 0;
+  const total = uniquePdfs.length;
+  const BATCH_SIZE = 2; // Analyze 2 PDFs concurrently
+  const BATCH_DELAY_MS = 3000; // 3 second delay between batches
+
+  // Track successes and failures for batch summary
+  let successCount = 0;
+  let failureCount = 0;
+  const recordIds = []; // Track record IDs for auto-commit
+
+  // Track timestamp before analysis starts (for filtering to current batch only)
+  // Subtract 30 seconds buffer to account for clock skew and processing delays
+  currentBatchStartTime = Date.now() - 30000;
+
+  // Helper function to analyze a single PDF
+  async function analyzePDF(url){
+    try{
+      const r = await fetch('/api/analyze_pdf', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({pdf_url:url})
+      });
+
+      // Check if response is JSON before parsing
+      const contentType = r.headers.get('content-type');
+      let j;
+      if (contentType && contentType.includes('application/json')) {
+        j = await r.json();
+      } else {
+        // Server returned non-JSON (error page, plain text, etc.)
+        const text = await r.text();
+        throw new Error(`Server error: ${text.substring(0, 200)}`);
+      }
+
+      if(j.ok){
+        successCount++;
+        // Collect record ID for auto-commit
+        const recordId = j.id || j.sha1 || j._id;
+        if(recordId) recordIds.push(recordId);
+
+        if(j.is_actionable === false){
+          log(`⊘ ${url} (filtered: ${j.filtered_reason || 'non-actionable'})`);
+        } else {
+          log(`✓ ${url}`);
+        }
+      } else {
+        failureCount++;
+        log(`✗ ${url}: ${j.error||'Failed'}`);
+      }
+    }catch(e){
+      failureCount++;
+      log(`✗ ${url}: ${e.message}`);
+    }
+
+    completed++;
+    updateProgress(completed, total);
+  }
+
+  // Process PDFs in batches
+  for(let i = 0; i < uniquePdfs.length; i += BATCH_SIZE){
+    const batch = uniquePdfs.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(url => analyzePDF(url)));
+
+    // Add delay between batches to prevent service overload
+    if(i + BATCH_SIZE < uniquePdfs.length){
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
+
+  // Log batch summary
+  try{
+    await fetch('/api/batch_summary', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        source_url: pageUrls.length > 0 ? pageUrls[0] : 'direct_pdf_analysis',
+        forms_found: total,
+        forms_analyzed: successCount,
+        forms_failed: failureCount
+      })
+    });
+  }catch(e){
+    console.warn('Failed to log batch summary:', e);
+  }
+
+  if(analyzeBtn) analyzeBtn.disabled = false;
+  hideProgress();
+
+  // Show summary
+  if(failureCount > 0){
+    log(`Analysis complete: ${successCount} succeeded, ${failureCount} failed`);
+  } else {
+    log(`Analysis complete: ${successCount} forms analyzed successfully`);
+  }
+
+  // Don't try to display records yet - wait for auto-commit to complete
+  // The reload logic after auto-commit will display all committed records
+  let validData = [];
+
+  // Auto-commit all analyzed forms using IDs collected during analysis
+  if(successCount > 0 && recordIds.length > 0){
+    log('Auto-committing analyzed forms...');
+
+    console.log('[AUTO-COMMIT] IDs collected during analysis:', recordIds);
+    log(`[AUTO-COMMIT] Committing ${recordIds.length} form(s)...`);
+
+    try {
+      const commitRes = await fetch('/api/commit_records', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ids: recordIds})
+      });
+
+      console.log('[AUTO-COMMIT] Response status:', commitRes.status);
+
+      // Check if response is JSON before parsing
+      const contentType = commitRes.headers.get('content-type');
+      if(!contentType || !contentType.includes('application/json')){
+        const responseText = await commitRes.text();
+        console.error('[AUTO-COMMIT] Non-JSON response:', responseText.substring(0, 500));
+        throw new Error(`Server returned non-JSON response (status ${commitRes.status}). Check server logs for details.`);
+      }
+
+      const commitData = await commitRes.json();
+      console.log('[AUTO-COMMIT] Response data:', commitData);
+
+      if(commitData.ok){
+        log(`✓ Auto-committed ${commitData.committed_count} forms to Global Genetics`);
+
+        // ALWAYS reload the committed records so they show in the UI
+        // (not just when validData is empty - we want to show ALL committed forms)
+        if(recordIds.length > 0){
+          log('Reloading committed records for display...');
+          const reloadData = await getJSON('/api/records?all=1');
+          const allRecords = reloadData.records || [];
+          // Filter to just the records we committed
+          const recordIdSet = new Set(recordIds);
+          validData = allRecords.filter(r => {
+            const rid = r.id || r.sha1 || r._id;
+            return rid && recordIdSet.has(rid);
+          });
+
+          // Update the UI with the loaded records
+          allRows = validData;
+          buildHeader();
+          renderRows(validData);
+          log(`Loaded ${validData.length} committed records for display`);
+        } else {
+          log(`⚠ Warning: No record IDs collected during analysis`);
+        }
+
+        // Auto-download report after successful commit
+        log('Generating and downloading report...');
+        await generateReport();
+
+      } else {
+        log(`⚠ Auto-commit failed: ${commitData.msg || commitData.error || 'Unknown error'}`);
+        console.error('[AUTO-COMMIT] Failed:', commitData);
+      }
+    } catch(e){
+      log(`⚠ Auto-commit error: ${e.message}`);
+      console.error('[AUTO-COMMIT] Exception:', e);
+    }
+  } else if(successCount > 0 && recordIds.length === 0){
+    log(`⚠ No record IDs collected during analysis (analyzed ${successCount} forms but got 0 IDs)`);
+    console.warn('[AUTO-COMMIT] successCount:', successCount, 'recordIds:', recordIds);
+  }
+  } catch(e) {
+    log(`Error during analysis: ${e.message}`);
+    console.error('[ANALYZE] Exception:', e);
+  } finally {
+    // Always re-enable button and hide progress
+    if(analyzeBtn) analyzeBtn.disabled = false;
+    hideProgress();
+  }
+}
+
+/* ===== Clear all previous commits ===== */
+async function autoClearCommits(){
+  // Automatically clear commits on page load (no PIN required for auto-clear)
+  try{
+    const r = await fetch('/api/uncommit_all', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pin: ''}) // Empty PIN for auto-clear
+    });
+    const j = await r.json();
+
+    if(j.ok && j.uncommitted_count > 0){
+      console.log(`Auto-cleared committed flag from ${j.uncommitted_count} records`);
+    }
+  }catch(e){
+    console.warn('Auto-clear failed:', e.message);
+  }
+}
+
+/* ===== Modal helpers ===== */
+function showModal(modalId){
+  const modal = get(modalId);
+  if(modal) modal.classList.add('show');
+}
+
+function hideModal(modalId){
+  const modal = get(modalId);
+  if(modal) modal.classList.remove('show');
+}
+
+function closePostAnalysisModal(){
+  hideModal('postAnalysisModal');
+}
+
+function generateReportFromModal(){
+  hideModal('postAnalysisModal');
+  generateReport();
+}
+
+function viewGeneticsFromModal(){
+  hideModal('postAnalysisModal');
+  window.location.href = '/genetics';
+}
+
+function runAnotherBatch(){
+  hideModal('postAnalysisModal');
+
+  // Clear input box
+  get('urlBox').value = '';
+
+  // Hide table and charts
+  get('tableWrap').style.display = 'none';
+  get('charts').style.display = 'none';
+
+  // Clear rows
+  rows = [];
+  allRows = [];
+
+  // Reset donut charts (d1-d3 only, d4 is payment total)
+  ['d1', 'd2', 'd3'].forEach(id => {
+    drawDonut(id, 0);
+    const yesEl = get(`${id}Yes`);
+    const noEl = get(`${id}No`);
+    if(yesEl) yesEl.textContent = '0%';
+    if(noEl) noEl.textContent = '0%';
+  });
+  // Reset d4 payment total
+  const d4Amount = get('d4Amount');
+  const d4Count = get('d4Count');
+  if(d4Amount) d4Amount.textContent = '$0.00';
+  if(d4Count) d4Count.textContent = '0 forms with fees';
+
+  // Reset found count
+  get('foundCount').textContent = '0';
+
+  // Focus on input for next batch
+  get('urlBox').focus();
+
+  log('Ready for next batch');
+}
+
+function closeDuplicateModal(){
+  hideModal('duplicateModal');
+}
+
+let pendingCommitIds = []; // Store IDs for duplicate modal actions
+
+async function commitSkipDuplicates(){
+  hideModal('duplicateModal');
+
+  // Filter out duplicates
+  const committedRecords = await getJSON('/api/records?committed=1');
+  const committedKeys = new Set(committedRecords.map(r => `${r.source_url}|${r.form_name}`));
+
+  const selectedRecords = rows.filter(r => pendingCommitIds.includes(r.id || r.sha1 || r._id));
+  const nonDuplicateIds = selectedRecords
+    .filter(r => !committedKeys.has(`${r.source_url}|${r.form_name}`))
+    .map(r => r.id || r.sha1 || r._id);
+
+  if(!nonDuplicateIds.length){
+    log('All selected forms are duplicates. Nothing to commit.');
+    return;
+  }
+
+  await performCommit(nonDuplicateIds);
+}
+
+async function commitWithDuplicates(){
+  hideModal('duplicateModal');
+  await performCommit(pendingCommitIds);
+}
+
+/* ===== Perform actual commit ===== */
+async function performCommit(ids){
+  console.log('[COMMIT CLIENT] Committing IDs:', ids);
+  console.log('[COMMIT CLIENT] Rows before commit:', rows.length);
+  console.log('[COMMIT CLIENT] AllRows before commit:', allRows.length);
+
+  try{
+    const r = await fetch('/api/commit_records', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ids})
+    });
+    const j = await r.json();
+
+    console.log('[COMMIT CLIENT] Response:', j);
+
+    if(j.ok){
+      log(`✓ Committed ${j.committed_count} record(s) to Global Genetics. View at /genetics`);
+
+      // Remove committed forms from the table
+      const committedIdSet = new Set(ids);
+
+      // Filter out committed records from both rows and allRows
+      rows = rows.filter(r => {
+        const recordId = r.id || r.sha1 || r._id || '';
+        return !committedIdSet.has(recordId);
+      });
+
+      allRows = allRows.filter(r => {
+        const recordId = r.id || r.sha1 || r._id || '';
+        return !committedIdSet.has(recordId);
+      });
+
+      console.log('[COMMIT CLIENT] Rows after filtering:', rows.length);
+      console.log('[COMMIT CLIENT] AllRows after filtering:', allRows.length);
+
+      // Re-render the table with remaining uncommitted forms
+      renderRows(rows);
+
+      // Uncheck header checkbox
+      const headerCb = document.querySelector('#theadRow input[type="checkbox"]');
+      if(headerCb) headerCb.checked = false;
+
+      console.log(`[COMMIT CLIENT] Removed ${ids.length} committed forms. ${rows.length} forms remaining in table.`);
+    } else {
+      log(`✗ ${j.msg||'Failed to commit'}`);
+    }
+  }catch(e){
+    log(`✗ ${e.message}`);
+  }
+}
+
+/* ===== Clear results UI after commit ===== */
+function clearResultsUI(){
+  // Clear data
+  rows = [];
+  allRows = [];
+
+  // Hide table and charts
+  get('tableWrap').style.display = 'none';
+  get('charts').style.display = 'none';
+
+  // Clear input and log
+  get('urlBox').value = '';
+  // Don't clear log - user wants to see the success message
+
+  // Reset counters
+  get('foundCount').textContent = '0';
+  get('tbody').innerHTML = '';
+
+  // Reset donut charts (d1-d3 only, d4 is payment total)
+  ['d1', 'd2', 'd3'].forEach(id => {
+    drawDonut(id, 0);
+    const yesEl = get(`${id}Yes`);
+    const noEl = get(`${id}No`);
+    if(yesEl) yesEl.textContent = '0%';
+    if(noEl) noEl.textContent = '0%';
+  });
+  // Reset d4 payment total
+  const d4Amount = get('d4Amount');
+  const d4Count = get('d4Count');
+  if(d4Amount) d4Amount.textContent = '$0.00';
+  if(d4Count) d4Count.textContent = '0 forms with fees';
+}
+
+/* ===== ENHANCED: Commit with duplicate detection ===== */
+async function handleCommit(){
+  const checkboxes = document.querySelectorAll('#tbody input[type="checkbox"]:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id')).filter(Boolean);
+
+  if(!ids.length){
+    log('Please select at least one row to commit');
+    return;
+  }
+
+  console.log('[COMMIT CLIENT] Total checkboxes checked:', checkboxes.length);
+  console.log('[COMMIT CLIENT] IDs being sent:', ids);
+  console.log('[COMMIT CLIENT] Total rows in table:', rows.length);
+
+  // Check for duplicates
+  try{
+    const committedRecords = await getJSON('/api/records?committed=1');
+    console.log('[COMMIT CLIENT] Committed records in database:', committedRecords.length);
+
+    // Build a set of committed (source_url|form_name) keys
+    const committedKeys = new Set(committedRecords.map(r => `${r.source_url}|${r.form_name}`));
+    console.log('[COMMIT CLIENT] Unique committed keys:', committedKeys.size);
+
+    // Find duplicates in selected rows
+    const selectedRecords = rows.filter(r => ids.includes(r.id || r.sha1 || r._id));
+    console.log('[COMMIT CLIENT] Selected records to commit:', selectedRecords.length);
+
+    const duplicates = selectedRecords.filter(r => committedKeys.has(`${r.source_url}|${r.form_name}`));
+    console.log('[COMMIT CLIENT] Duplicates found:', duplicates.length);
+
+    if(duplicates.length > 0){
+      // Show duplicate modal
+      pendingCommitIds = ids;
+
+      get('duplicateCount').textContent = duplicates.length;
+
+      const duplicateList = get('duplicateList');
+      duplicateList.innerHTML = duplicates.map(d =>
+        `<div class="duplicate-item">${d.form_name || d.title || 'Untitled'} (${d.entity_name || 'Unknown Entity'})</div>`
+      ).join('');
+
+      console.log('[COMMIT CLIENT] Showing duplicate modal. Total pending:', pendingCommitIds.length);
+      log(`⚠️ Found ${duplicates.length} duplicate(s) in Global Genetics. Choose how to proceed.`);
+      showModal('duplicateModal');
+      return;
+    }
+
+    // No duplicates, proceed with commit
+    console.log('[COMMIT CLIENT] No duplicates found, proceeding with commit');
+    await performCommit(ids);
+  }catch(e){
+    log(`✗ ${e.message}`);
+    console.error('[COMMIT CLIENT] Error:', e);
+  }
+}
+
+/* ===== Generate HTML Report ===== */
+async function generateReport(){
+  console.log('[REPORT] generateReport() called');
+  console.log('[REPORT] rows.length:', rows.length);
+  console.log('[REPORT] allRows.length:', allRows.length);
+
+  // Get IDs of SELECTED forms only (checked checkboxes)
+  const checkboxes = document.querySelectorAll('#tbody input[type="checkbox"]:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id')).filter(Boolean);
+
+  console.log('[REPORT] Total checkboxes checked:', checkboxes.length);
+  console.log('[REPORT] Selected IDs:', ids);
+
+  if(!ids.length){
+    log('Please select at least one form to include in the report');
+    console.error('[REPORT] ERROR: No forms selected (no checkboxes checked)');
+    return;
+  }
+
+  try {
+    log(`Generating report for ${ids.length} selected form(s)...`);
+
+    // Call backend API to generate report using report-template.html
+    // Pass specific form IDs to generate report for current batch only
+    const res = await fetch('/api/report/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        ids: ids  // Generate report for specific forms from current batch
+        // Don't filter by committed status - just use the IDs we provide
+      })
+    });
+
+    console.log('[REPORT] Response status:', res.status);
+    console.log('[REPORT] Response OK:', res.ok);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[REPORT] Error response:', errorText);
+      throw new Error(`Report API failed: ${res.status} ${res.statusText}`);
+    }
+
+    console.log('[REPORT] Parsing JSON response...');
+    const data = await res.json();
+    console.log('[REPORT] Response data:', data);
+    console.log('[REPORT] data.ok:', data.ok);
+    console.log('[REPORT] data.count:', data.count);
+    console.log('[REPORT] data.html length:', data.html ? data.html.length : 0);
+
+    if (!data.ok) {
+      console.error('[REPORT] Backend returned not-ok:', data);
+      const errorMsg = data.error || 'Report API returned not-ok status';
+
+      // If backend provided an error HTML page, download it to show the user
+      if (data.html) {
+        log(`⚠️  ${errorMsg} - downloading error details...`);
+        const blob = new Blob([data.html], {type:'text/html'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `form-genome-error-${Date.now()}.html`;
+        a.click();
+      }
+
+      throw new Error(errorMsg);
+    }
+
+    if (!data.html) {
+      console.error('[REPORT] No HTML in response:', data);
+      throw new Error('Report API returned no HTML');
+    }
+
+    log(`✓ Report generated with ${data.count} forms`);
+    console.log('[REPORT] Creating download blob...');
+
+    // Download the report HTML
+    const blob = new Blob([data.html], {type:'text/html'});
+    console.log('[REPORT] Blob created, size:', blob.size);
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const filename = `form-genome-report-${Date.now()}.html`;
+    a.download = filename;
+    console.log('[REPORT] Triggering download:', filename);
+    a.click();
+    console.log('[REPORT] Download triggered successfully');
+    log(`✓ Report downloaded: ${filename}`);
+
+  } catch (e) {
+    console.error('[REPORT] ERROR - Report generation failed:', e);
+    console.error('[REPORT] ERROR - Stack trace:', e.stack);
+    log(`✗ Report generation failed: ${e.message}`);
+  }
+}
+
+function exportCSV(){
+  if(!rows.length) return;
+  const headers = colOrder.filter(k => k !== '_select').map(k=>COLS.find(c=>c.key===k)?.label||k);
+  const csv = [headers.join(',')].concat(rows.map(r=> colOrder.filter(k => k !== '_select').map(k=>JSON.stringify(r[k]||'')).join(','))).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `forms_${Date.now()}.csv`;
+  a.click();
+}
+
+/* ===== Paste handler ===== */
+(function(){
+  // Wait for DOM to be ready before setting up drag/drop
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragDrop);
+  } else {
+    initDragDrop();
+  }
+
+  function initDragDrop() {
+  const urlRegex = /https?:\/\/[^\s"'<>)\]]+/gi;
+  
+  function extractUrlsFromHTML(html){
+    try{
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const hrefs = Array.from(doc.querySelectorAll('a[href]'), a => a.getAttribute('href'));
+      return hrefs.filter(Boolean).filter(href => /^https?:\/\//i.test(href));
+    }catch{
+      return [];
+    }
+  }
+  
+  function mergeIntoBox(urls){
+    const box = get('urlBox');
+    if(!box || !urls || !urls.length) return;
+    
+    const existing = (box.value.match(urlRegex) || []);
+    const merged = Array.from(new Set([...existing, ...urls.map(u => u.trim())].filter(Boolean)));
+    
+    box.value = merged.join('\n');
+    log(`Pasted ${urls.length} URL(s) - Total: ${merged.length}`);
+    
+    box.scrollTop = box.scrollHeight;
+  }
+  
+  document.addEventListener('paste', (e) => {
+    const box = get('urlBox');
+    if(!box) return;
+    
+    const cd = e.clipboardData || window.clipboardData;
+    if(!cd) return;
+    
+    let urls = [];
+    
+    const uriList = cd.getData('text/uri-list');
+    if(uriList && /https?:\/\//i.test(uriList)){
+      urls = uriList.split(/\r?\n/).filter(l => l && !l.startsWith('#') && /^https?:\/\//i.test(l));
+    }
+    
+    if(!urls.length){
+      const html = cd.getData('text/html');
+      if(html && /<a\b/i.test(html)){
+        urls = extractUrlsFromHTML(html);
+      }
+    }
+    
+    if(!urls.length){
+      const txt = cd.getData('text');
+      if(txt){
+        // Try regex match first
+        urls = (txt.match(urlRegex) || []);
+
+        // If no regex matches, try splitting by lines/whitespace
+        if(!urls.length){
+          const lines = txt.split(/[\r\n\t,]+/).map(s => s.trim()).filter(Boolean);
+          urls = lines.filter(line => /^https?:\/\//i.test(line));
+        }
+      }
+    }
+
+    if(urls.length){
+      e.preventDefault();
+      e.stopPropagation();
+      mergeIntoBox(urls);
+      box.focus();
+    }
+  }, {capture: true});
+  
+  const urlBox = get('urlBox');
+  if(urlBox){
+    urlBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      urlBox.style.borderColor = '#76e0a6';
+    });
+
+    urlBox.addEventListener('dragleave', (e) => {
+      urlBox.style.borderColor = '';
+    });
+
+    urlBox.addEventListener('drop', (e) => {
+      e.preventDefault();
+      urlBox.style.borderColor = '';
+
+      const dt = e.dataTransfer;
+      if(!dt) return;
+
+      const txt = dt.getData('text/plain') || dt.getData('text/html');
+      if(txt){
+        const urls = txt.match(urlRegex) || [];
+        if(urls.length){
+          mergeIntoBox(urls);
+        }
+      }
+    });
+  }
+
+  // Add drag and drop to the dropzone box
+  const dropZone = get('dropZone');
+  if(dropZone){
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#76e0a6';
+      dropZone.style.background = 'rgba(118, 224, 166, 0.05)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      dropZone.style.borderColor = '';
+      dropZone.style.background = '';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '';
+      dropZone.style.background = '';
+
+      const dt = e.dataTransfer;
+      if(!dt) return;
+
+      const txt = dt.getData('text/plain') || dt.getData('text/html');
+      if(txt){
+        const urls = txt.match(urlRegex) || [];
+        if(urls.length){
+          mergeIntoBox(urls);
+        }
+      }
+    });
+  }
+  } // end initDragDrop
+})();
+
+/* ===== Filter & Sort Functions ===== */
+function createFilterDropdown(key, spec) {
+  const dropdown = document.createElement('div');
+  dropdown.className = 'filter-dropdown';
+
+  if (spec.type === 'bool') {
+    dropdown.innerHTML = `
+      <label><input type="checkbox" value="true" ${activeFilters[key]?.includes('true') ? 'checked' : ''}> Yes</label>
+      <label><input type="checkbox" value="false" ${activeFilters[key]?.includes('false') ? 'checked' : ''}> No</label>
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      if (checked.length > 0 && checked.length < 2) {
+        activeFilters[key] = checked;
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+  } else if (spec.type === 'text' || spec.type === 'title') {
+    dropdown.innerHTML = `
+      <input type="text" placeholder="Search..." value="${activeFilters[key] || ''}">
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    const input = dropdown.querySelector('input[type="text"]');
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const val = input.value.trim();
+      if (val) {
+        activeFilters[key] = val.toLowerCase();
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') dropdown.querySelector('.apply').click();
+    });
+  } else if (spec.type === 'num') {
+    const current = activeFilters[key] || {};
+    dropdown.innerHTML = `
+      <div style="margin-bottom:6px"><input type="number" placeholder="Min" value="${current.min ?? ''}" id="min-${key}"></div>
+      <div><input type="number" placeholder="Max" value="${current.max ?? ''}" id="max-${key}"></div>
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const min = dropdown.querySelector(`#min-${key}`).value;
+      const max = dropdown.querySelector(`#max-${key}`).value;
+      if (min || max) {
+        activeFilters[key] = { min: min ? parseFloat(min) : undefined, max: max ? parseFloat(max) : undefined };
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+  }
+
+  return dropdown;
+}
+
+function applyFilters() {
+  const filteredRows = allRows.filter(row => {
+    for (const [key, filterValue] of Object.entries(activeFilters)) {
+      const spec = COLS.find(c => c.key === key);
+      if (!spec) continue;
+
+      const cellValue = key.includes('.') ?
+        key.split('.').reduce((obj, k) => (obj != null ? obj[k] : undefined), row) :
+        row[key];
+
+      if (spec.type === 'bool') {
+        const boolVal = cellValue ? 'true' : 'false';
+        if (!filterValue.includes(boolVal)) return false;
+      } else if (spec.type === 'text' || spec.type === 'title') {
+        const textVal = String(cellValue || '').toLowerCase();
+        if (!textVal.includes(filterValue)) return false;
+      } else if (spec.type === 'num') {
+        const numVal = parseFloat(cellValue);
+        if (isNaN(numVal)) return false;
+        if (filterValue.min !== undefined && numVal < filterValue.min) return false;
+        if (filterValue.max !== undefined && numVal > filterValue.max) return false;
+      }
+    }
+    return true;
+  });
+
+  renderRows(filteredRows);
+}
+
+function sortByColumn(columnKey, direction) {
+  if (!direction) {
+    sortState = {column: null, direction: null};
+    if (Object.keys(activeFilters).length > 0) {
+      applyFilters();
+    } else {
+      renderRows(allRows);
+    }
+    buildHeader();
+    return;
+  }
+
+  sortState = {column: columnKey, direction};
+
+  const sorted = [...rows].sort((a, b) => {
+    const aVal = columnKey.split('.').reduce((o, k) => (o != null ? o[k] : undefined), a);
+    const bVal = columnKey.split('.').reduce((o, k) => (o != null ? o[k] : undefined), b);
+
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return direction === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+
+    return 0;
+  });
+
+  renderRows(sorted);
+  buildHeader();
+}
+
+/* ===== Table rendering ===== */
+function buildHeader(){
+  const tr = get('theadRow');
+  if(!tr) return;
+  tr.innerHTML = '';
+
+  // Apply column widths via colgroup
+  const colgroup = get('colgroup');
+  if(colgroup){
+    colgroup.innerHTML = '';
+    colOrder.forEach(key => {
+      const col = document.createElement('col');
+      if(colWidths[key]){
+        col.style.width = colWidths[key];
+      }
+      colgroup.appendChild(col);
+    });
+  }
+
+  colOrder.forEach(key => {
+    const spec = COLS.find(c => c.key === key);
+    if(!spec) return;
+
+    const th = document.createElement('th');
+
+    // Add tooltip if available
+    if (spec.tooltip) {
+      th.title = spec.tooltip;
+    }
+
+    if(spec.type === 'checkbox'){
+      th.className = 'checkbox-col';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true; // ✓ Default to checked (all rows checked by default)
+      cb.addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('#tbody input[type="checkbox"]');
+        checkboxes.forEach(c => c.checked = e.target.checked);
+      });
+      th.appendChild(cb);
+    } else {
+      const headerSpan = document.createElement('span');
+      headerSpan.textContent = spec.label;
+
+      // Add sort icon for numeric columns
+      if (spec.type === 'num') {
+        const sortIcon = document.createElement('span');
+        sortIcon.className = 'sort-icon' + (sortState.column === key ? ' active' : '');
+        sortIcon.innerHTML = sortState.column === key ? (sortState.direction === 'asc' ? '▲' : '▼') : '↕';
+        sortIcon.title = 'Sort';
+
+        sortIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (sortState.column === key) {
+            if (sortState.direction === 'asc') {
+              sortByColumn(key, 'desc');
+            } else {
+              sortByColumn(key, null);
+            }
+          } else {
+            sortByColumn(key, 'asc');
+          }
+        });
+
+        headerSpan.appendChild(sortIcon);
+      }
+
+      // Add filter icon (all filterable columns except checkbox)
+      if (spec.type !== 'checkbox' && spec.type !== 'link') {
+        const filterIcon = document.createElement('span');
+        filterIcon.className = 'filter-icon' + (activeFilters[key] ? ' active' : '');
+        filterIcon.innerHTML = '▼';
+        filterIcon.title = 'Filter';
+        headerSpan.appendChild(filterIcon);
+
+        // Create filter dropdown
+        const filterDropdown = createFilterDropdown(key, spec);
+        th.appendChild(filterDropdown);
+
+        // Toggle filter dropdown
+        filterIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.filter-dropdown.show').forEach(d => {
+            if (d !== filterDropdown) d.classList.remove('show');
+          });
+          filterDropdown.classList.toggle('show');
+        });
+      }
+
+      th.appendChild(headerSpan);
+    }
+
+    tr.appendChild(th);
+  });
+}
+
+/* ===== IMPROVED: Better title normalization ===== */
+function normalizeTitle(s, isPretty = false){
+  if(!s) return 'Untitled Form';
+
+  // Convert to string and basic cleanup
+  s = s.toString().trim();
+
+  // If this is already a pretty title (LLM-generated), do minimal cleanup
+  if(isPretty){
+    s = s.replace(/[\r\n\t]+/g, ' ');
+    s = s.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '').replace(/\s{2,}/g, ' ');
+    s = s.replace(/\.pdf$/i, '').trim();
+    // Handle HTML entities that might have snuck in
+    s = s.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&#39;/g, "'").replace(/&quot;/gi, '"');
+    s = s.replace(/\s{2,}/g, ' ').trim();
+    return s || 'Untitled Form';
+  }
+
+  // Replace newlines and tabs with spaces
+  s = s.replace(/[\r\n\t]+/g, ' ');
+
+  // Remove zero-width characters, control characters, and excessive whitespace
+  s = s.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '').replace(/\s{2,}/g, ' ');
+  
+  // Remove double-encoded entities (like &amp;#39; -> ')
+  s = s.replace(/&amp;(#?\w+;)/g, '&$1');
+  s = s.replace(/â€™/g, "'")
+    .replace(/â€"/g, "—")
+    .replace(/â€"/g, "–")
+    .replace(/â€œ/g, '"')
+    .replace(/â€/g, '"')
+    .replace(/Ã¢/g, 'â')
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã¨/g, 'è')
+    .replace(/Ã¼/g, 'ü')
+    .replace(/Ã¶/g, 'ö')
+    .replace(/Ã¤/g, 'ä')
+    .replace(/Ã±/g, 'ñ')
+    .replace(/Ã§/g, 'ç')
+    .replace(/Ã¡/g, 'á')
+    .replace(/Ã­/g, 'í')
+    .replace(/Ã³/g, 'ó')
+    .replace(/Ãº/g, 'ú')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&reg;/gi, '®')
+    .replace(/&copy;/gi, '©')
+    .replace(/&trade;/gi, '™')
+    .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+  // Fix Windows-1252 encoding issues
+  s = s.replace(/[\u0080-\u009F]/g, (match) => {
+    const cp1252 = {
+      '\u0091': "'", '\u0092': "'", '\u0093': '"', '\u0094': '"',
+      '\u0096': '–', '\u0097': '—', '\u0099': '™', '\u009C': 'œ'
+    };
+    return cp1252[match] || '';
+  });
+  
+  // Remove common file extensions
+  s = s.replace(/\.(pdf|PDF|docx?|DOCX?|xlsx?|XLSX?|txt|TXT)$/i, '');
+  
+  // Handle URLs - extract meaningful part
+  if(/^https?:\/\//i.test(s)){
+    try{
+      const url = new URL(s);
+      s = url.pathname.split('/').pop() || 'Form';
+      s = decodeURIComponent(s);
+      s = s.replace(/[_-]+/g, ' ');
+    }catch{}
+  }
+  
+  // Remove common junk patterns
+  s = s.replace(/^(copy of|draft|final|revised|updated|new|old|test|temp|tmp)\s+/i, '');
+  s = s.replace(/^(form|frm|doc|document|file|pdf)[\s\-_]*\d+[\s\-_]*/i, '');
+  s = s.replace(/^\d{2,}[\s\-_]+/, ''); // Remove leading numbers (like "123 - form")
+  s = s.replace(/\s+(copy|draft|final|revised|updated|v?\d+)$/i, '');
+  s = s.replace(/\[[^\]]+\]$/, ''); // Remove bracketed suffixes like [1]
+  s = s.replace(/\([^)]+\)$/, ''); // Remove parenthetical suffixes like (1)
+  
+  // Remove leading numbers, special chars, and clean up
+  s = s.replace(/^[\d\s\-_\.\#\*\+]+/, ''); // Remove leading junk
+  s = s.replace(/[_\-]{2,}/g, ' '); // Multiple underscores/dashes to space
+  s = s.replace(/[^\w\s\-\.'",;&\/\(\)\[\]]+/g, ' '); // Keep only safe chars
+  s = s.replace(/(.)\1{4,}/g, '$1$1'); // Reduce repeated chars (aaaaa -> aa)
+  s = s.replace(/\b(\w+)\s+\1\b/gi, '$1'); // Remove duplicate adjacent words
+  s = s.replace(/^\W+|\W+$/g, ''); // Remove leading/trailing non-word chars
+  
+  // If the title looks like a filename with underscores, clean it up
+  if(/^[\w_\-\.]+$/.test(s) && s.includes('_')){
+    s = s.replace(/[_\-]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    // If it's all caps after this, lowercase it
+    if(s.length > 4 && s === s.toUpperCase()){
+      s = s.toLowerCase();
+    }
+  }
+  
+  // Handle all caps titles
+  if(s.length > 4 && s === s.toUpperCase()){
+    s = s.toLowerCase();
+  }
+  
+  // Smart title case for shorter titles
+  if(s.length < 80){
+    s = s.replace(/\b([A-Za-z][A-Za-z']*)\b/g, (match, p1, offset) => {
+      // List of words to keep lowercase (unless at start)
+      const lowercaseWords = ['and', 'of', 'the', 'for', 'a', 'an', 'to', 'in', 'on', 'at', 
+                              'by', 'or', 'from', 'with', 'as', 'vs', 'but', 'nor'];
+      
+      if(offset === 0 || !lowercaseWords.includes(match.toLowerCase())){
+        return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+      }
+      return match.toLowerCase();
+    });
+  }
+  
+  // Handle special cases and acronyms
+  s = s.replace(/\b(llc|inc|corp|ltd|usa|uk|us|eu|pdf|doc|docx)\b/gi, m => m.toUpperCase());
+  s = s.replace(/\b(irs|fbi|cia|dod|hhs|cms|fda|epa|sec|ftc|fcc|dhs|va|gsa|nasa)\b/gi, m => m.toUpperCase());
+  s = s.replace(/\bi\b/g, 'I'); // Capitalize standalone 'i'
+  s = s.replace(/\b(\d+)(st|nd|rd|th)\b/gi, (m, num, suffix) => num + suffix.toLowerCase());
+  
+  // Final cleanup
+  s = s.replace(/\s{2,}/g, ' ').trim();
+  
+  // Make sure first character is capitalized if it's a letter
+  if(s.length > 0 && /^[a-z]/.test(s)){
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  
+  // If still empty or too short, provide default
+  if(!s || s.length < 2) return 'Untitled Form';
+  
+  // If it's just numbers or nonsense, use default
+  if(/^\d+$/.test(s) || /^[^a-zA-Z]+$/.test(s)) return 'Form ' + s.substring(0, 10);
+  
+  // Truncate if too long
+  if(s.length > 120){
+    s = s.substring(0, 117) + '...';
+  }
+  
+  return s;
+}
+
+/* ===== Helper to get nested values ===== */
+function getNestedValue(obj, path){
+  if(!path || !obj) return undefined;
+  const keys = path.split('.');
+  let value = obj;
+  for(const key of keys){
+    if(value == null) return undefined;
+    value = value[key];
+  }
+  return value;
+}
+
+/* ===== Action Type Helper ===== */
+function actionType(r){
+  const sig = +(r?.signature_analysis?.signature_count ?? r?.signature_count ?? 0);
+  const notary = !!r?.notarization_required || !!r?.witnesses_required;
+  const info = (+r?.field_count > 0) || !!r?.attachments_required;
+  if(sig > 0 || notary) return 'Signature Required';
+  if(info) return 'Information Collection';
+  return 'Disclosure';
+}
+
+function renderRows(data){
+  rows = data.map(r => {
+    if(!r.action_type) r.action_type = actionType(r);
+    return r;
+  });
+
+  // Calculate max values for databars
+  const maxComplexity = Math.max(...rows.map(r => r.complexity_score || 0), 100);
+  const maxNigo = Math.max(...rows.map(r => r.nigo_score || 0), 100);
+
+  const tb = get('tbody');
+  if(!tb) return;
+
+  tb.innerHTML = '';
+  
+  for(const r of rows){
+    const tr = document.createElement('tr');
+    
+    // Get the proper ID - prioritize id and sha1 over source_url
+    const recordId = r.id || r.sha1 || r._id || '';
+    
+    for(const key of colOrder){
+      const spec = COLS.find(c => c.key === key);
+      if(!spec) continue;
+      
+      const td = document.createElement('td');
+      
+      if(spec.type === 'checkbox'){
+        td.className = 'checkbox-col';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true; // ✓ FIXED: Check all by default
+        // IMPORTANT: Use id/sha1/_id only, NOT source_url
+        cb.setAttribute('data-id', recordId);
+        td.appendChild(cb);
+
+      } else if(spec.type === 'expand'){
+        td.className = 'expand-cell';
+        const icon = document.createElement('span');
+        icon.className = 'expand-icon';
+        icon.textContent = '▸';
+        icon.setAttribute('data-record-id', recordId);
+        td.appendChild(icon);
+
+      } else if(spec.type === 'title'){
+        td.className = 'titleCell';
+        // Prefer pretty_title (LLM-generated), fallback to form_name/title
+        const rawTitle = r.pretty_title || r.form_name || r.title || '';
+        const isPretty = !!r.pretty_title;
+        const t = normalizeTitle(rawTitle, isPretty);
+        const span = document.createElement('span');
+        span.className = 'titleText';
+        span.textContent = t;
+        td.appendChild(span);
+        
+        const lang = +(r.language_count || 0);
+        if(lang > 1){
+          const chip = document.createElement('span');
+          chip.className = 'langChip';
+          chip.textContent = `x${lang}`;
+          td.appendChild(chip);
+        }
+        
+      } else if(spec.type === 'bool'){
+        const v = !!getNestedValue(r, key);
+        const chip = document.createElement('span');
+        chip.className = `chip ${v ? 'yes' : 'no'}`;
+        chip.textContent = v ? '✓ Yes' : '— No';
+        td.appendChild(chip);
+
+      } else if(spec.type === 'num'){
+        const v = getNestedValue(r, key);
+        td.className = 'num';
+        td.textContent = (v == null || v === '') ? '—' : v;
+
+      } else if(spec.type === 'currency'){
+        const v = getNestedValue(r, key);
+        td.className = 'num';
+        if (v == null || v === '' || v === 0) {
+          td.textContent = '—';
+        } else {
+          td.textContent = '$' + parseFloat(v).toFixed(2);
+        }
+
+      } else if(spec.type === 'databar'){
+        const v = getNestedValue(r, key);
+        const numVal = parseFloat(v) || 0;
+        const maxVal = key === 'complexity_score' ? maxComplexity : maxNigo;
+        const widthPct = maxVal > 0 ? Math.min(100, (numVal / maxVal) * 100) : 0;
+
+        td.className = 'databar-cell';
+        const bg = document.createElement('div');
+        bg.className = 'databar-bg';
+        bg.style.width = widthPct + '%';
+        td.appendChild(bg);
+
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'databar-value';
+        valueSpan.textContent = (v == null || v === '') ? '—' : String(Math.round(numVal));
+        td.appendChild(valueSpan);
+
+      } else if(spec.type === 'link'){
+        const url = r.source_url || '';
+        if(url){
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = 'View';
+          td.appendChild(a);
+        } else {
+          td.textContent = '—';
+        }
+
+      } else {
+        td.textContent = getNestedValue(r, key) || '—';
+      }
+
+      // Apply left-align to specific columns
+      if(['action_type', 'key_drivers', 'special_requirements'].includes(key)){
+        td.classList.add('left-align');
+      }
+
+      tr.appendChild(td);
+    }
+
+    tb.appendChild(tr);
+
+    // Create detail row for key_drivers and special_requirements
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'detail-row';
+    detailRow.setAttribute('data-record-id', recordId);
+
+    const detailTd = document.createElement('td');
+    detailTd.colSpan = colOrder.length;
+
+    const detailContent = document.createElement('div');
+    detailContent.className = 'detail-content';
+
+    // Key Drivers section
+    const keyDriversSection = document.createElement('div');
+    keyDriversSection.className = 'detail-section';
+    const keyDriversLabel = document.createElement('div');
+    keyDriversLabel.className = 'detail-label';
+    keyDriversLabel.textContent = 'Key Drivers';
+    const keyDriversValue = document.createElement('div');
+    keyDriversValue.className = 'detail-value';
+    keyDriversValue.textContent = r.key_drivers || '—';
+    keyDriversSection.appendChild(keyDriversLabel);
+    keyDriversSection.appendChild(keyDriversValue);
+
+    // Special Requirements section
+    const specialReqSection = document.createElement('div');
+    specialReqSection.className = 'detail-section';
+    const specialReqLabel = document.createElement('div');
+    specialReqLabel.className = 'detail-label';
+    specialReqLabel.textContent = 'Special Requirements';
+    const specialReqValue = document.createElement('div');
+    specialReqValue.className = 'detail-value';
+    specialReqValue.textContent = r.special_requirements || '—';
+    specialReqSection.appendChild(specialReqLabel);
+    specialReqSection.appendChild(specialReqValue);
+
+    detailContent.appendChild(keyDriversSection);
+    detailContent.appendChild(specialReqSection);
+    detailTd.appendChild(detailContent);
+    detailRow.appendChild(detailTd);
+
+    tb.appendChild(detailRow);
+  }
+
+  // Add click handlers for expand icons
+  document.querySelectorAll('.expand-icon').forEach(icon => {
+    icon.addEventListener('click', function(e){
+      e.stopPropagation();
+      const recordId = this.getAttribute('data-record-id');
+      const detailRow = document.querySelector(`tr.detail-row[data-record-id="${recordId}"]`);
+
+      if(detailRow){
+        const isExpanded = detailRow.classList.contains('show');
+        detailRow.classList.toggle('show', !isExpanded);
+        this.classList.toggle('expanded', !isExpanded);
+      }
+    });
+  });
+
+  const tableWrap = get('tableWrap');
+  if(tableWrap) tableWrap.style.display = rows.length ? 'block' : 'none';
+  get('foundCount').textContent = rows.length;
+
+  // Initialize ScrollBooster for smooth drag-to-scroll
+  if(rows.length && tableWrap && typeof ScrollBooster !== 'undefined'){
+    new ScrollBooster({
+      viewport: tableWrap,
+      content: tableWrap.querySelector('table'),
+      direction: 'all',  // Allow drag scrolling in all directions (horizontal + vertical)
+      scrollMode: 'native',
+      emulateScroll: true,
+      bounce: true,
+      friction: 0.05,
+      bounceForce: 0.1,
+    });
+
+    // Add Shift+Wheel horizontal scrolling for mouse users
+    tableWrap.addEventListener('wheel', (e) => {
+      if (e.shiftKey) {
+        e.preventDefault();
+        tableWrap.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
+  updateDonuts(rows);
+}
+
+/* ===== Configurable Donuts ===== */
+function drawDonut(id, pctYes){
+  const canvas = get(id);
+  if(!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+
+  // Scale to canvas size dynamically
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = (Math.min(canvas.width, canvas.height) / 2) * 0.65;
+  const w = r * 0.5; // Thick ring (50% of radius)
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background circle (gray) with shadow for depth
+  // Shadow layer
+  ctx.beginPath();
+  ctx.arc(cx + 3, cy + 3, r, 0, Math.PI*2);
+  ctx.lineWidth = w;
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.stroke();
+
+  // Main background ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.lineWidth = w;
+  ctx.strokeStyle = '#a7b3ca';
+  ctx.stroke();
+
+  // Progress arc (accent color) with shadow for depth
+  if(pctYes > 0){
+    const start = -Math.PI/2, end = start + (pctYes/100) * Math.PI*2;
+
+    // Shadow layer
+    ctx.beginPath();
+    ctx.arc(cx + 3, cy + 3, r, start, end);
+    ctx.lineWidth = w;
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.stroke();
+
+    // Main progress arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, end);
+    ctx.lineWidth = w;
+    ctx.strokeStyle = '#76e0a6';
+    ctx.stroke();
+  }
+}
+
+function dist(rows, attr){
+  // Special handling for action_type
+  if(attr === 'action_type'){
+    let sig = 0, info = 0, disc = 0;
+    rows.forEach(r => {
+      const type = r.action_type || actionType(r);
+      // Check for "Signature Required" specifically (not "No Signature")
+      if(type === 'Signature Required' || (type.includes('Signature') && !type.includes('No Signature'))) sig++;
+      else if(type.includes('Information')) info++;
+      else disc++;
+    });
+    const total = rows.length || 1;
+    // For action type, show percentage of signature required forms
+    return {y: sig, n: info + disc};
+  }
+  
+  // Special handling for language_count
+  if(attr === 'language_count'){ 
+    let y = 0, n = 0; 
+    rows.forEach(r => (+r.language_count || 0) >= 2 ? y++ : n++); 
+    return {y, n}; 
+  }
+  
+  // Special handling for text fields (industry_vertical, etc)
+  if(attr === 'industry_vertical' || attr === 'industry_subvertical'){
+    let y = 0, n = 0;
+    rows.forEach(r => (r[attr] && r[attr] !== '' && r[attr] !== 'Unknown') ? y++ : n++);
+    return {y, n};
+  }
+  
+  // Default boolean handling
+  let y = 0, n = 0; 
+  rows.forEach(r => (r[attr] === true || String(r[attr]).toLowerCase() === 'yes') ? y++ : n++); 
+  return {y, n};
+}
+
+function updateDonuts(data){
+  const charts = get('charts');
+  if(!data || !data.length){
+    if(charts) charts.style.display = 'none';
+    return;
+  }
+  if(charts) charts.style.display = 'grid';
+
+  console.log('[DONUTS] Updating donuts with', data.length, 'records');
+
+  // Update first 3 donuts (d1, d2, d3)
+  ['d1', 'd2', 'd3'].forEach(donutId => {
+    const attr = donutConfig[donutId];
+    const spec = COLS.find(c => c.key === attr);
+    if(!spec) return;
+
+    const d = dist(data, attr);
+    const tot = (d.y + d.n) || 1;
+    const y = Math.round(d.y * 100 / tot);
+    const n = 100 - y;
+
+    console.log(`[DONUTS] ${spec.label} (${attr}): YES=${d.y} (${y}%), NO=${d.n} (${n}%), TOTAL=${tot}`);
+
+    // Update title
+    get(`${donutId}Title`).textContent = spec.label;
+
+    // Update legend labels based on type
+    const yesLabel = get(`${donutId}Yes`).parentElement;
+    const noLabel = get(`${donutId}No`).parentElement;
+
+    if(attr === 'action_type'){
+      yesLabel.innerHTML = `<span class="dot yes"></span><span>Signature — <strong id="${donutId}Yes">${y}%</strong></span>`;
+      noLabel.innerHTML = `<span class="dot no"></span><span>Other — <strong id="${donutId}No">${n}%</strong></span>`;
+    } else if(attr === 'language_count'){
+      yesLabel.innerHTML = `<span class="dot yes"></span><span>Multi — <strong id="${donutId}Yes">${y}%</strong></span>`;
+      noLabel.innerHTML = `<span class="dot no"></span><span>Single — <strong id="${donutId}No">${n}%</strong></span>`;
+    } else if(attr === 'industry_vertical' || attr === 'industry_subvertical'){
+      yesLabel.innerHTML = `<span class="dot yes"></span><span>Has Value — <strong id="${donutId}Yes">${y}%</strong></span>`;
+      noLabel.innerHTML = `<span class="dot no"></span><span>Unknown — <strong id="${donutId}No">${n}%</strong></span>`;
+    } else {
+      yesLabel.innerHTML = `<span class="dot yes"></span><span>Yes — <strong id="${donutId}Yes">${y}%</strong></span>`;
+      noLabel.innerHTML = `<span class="dot no"></span><span>No — <strong id="${donutId}No">${n}%</strong></span>`;
+    }
+
+    drawDonut(donutId, y);
+  });
+
+  // Handle d4 as payment total (not a donut)
+  let totalFees = 0;
+  let formsWithFees = 0;
+  data.forEach(r => {
+    const amt = parseFloat(r.payment_amount || 0);
+    if(amt > 0){
+      totalFees += amt;
+      formsWithFees++;
+    }
+  });
+
+  const d4Amount = get('d4Amount');
+  const d4Count = get('d4Count');
+  if(d4Amount) d4Amount.textContent = '$' + totalFees.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if(d4Count) d4Count.textContent = `${formsWithFees} form${formsWithFees !== 1 ? 's' : ''} with fees`;
+}
+
+/* ===== Load Prefs from API ===== */
+let colWidths = {}; // Store column widths from prefs
+
+async function loadPrefs(){
+  try{
+    const prefs = await fetch('/api/admin/ui_prefs').then(r => r.json());
+
+    // Apply donut config
+    if(prefs.donut_config){
+      donutConfig = prefs.donut_config;
+    }
+
+    // Apply column order
+    if(prefs.col_order && prefs.col_order.length > 0){
+      colOrder = ['_select', ...prefs.col_order]; // Always prepend checkbox column
+    }
+
+    // Store column widths
+    if(prefs.col_widths){
+      colWidths = prefs.col_widths;
+    }
+  }catch(e){
+    console.warn('Failed to load prefs, using defaults:', e);
+  }
+}
+
+// Listen for BroadcastChannel updates from admin
+const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('fgp_prefs') : null;
+if(bc){
+  bc.addEventListener('message', (e) => {
+    if(e.data && e.data.type === 'prefs_updated' && (e.data.kind === 'order' || e.data.kind === 'widths')){
+      console.log('[BroadcastChannel] Prefs updated, reloading page...');
+      setTimeout(() => location.reload(), 300);
+    }
+  });
+}
+
+/* ===== Industry Classification (Automatic) ===== */
+// Industry vertical and sub-vertical are now automatically determined
+// by the backend analyzer based on URL domain patterns
+
+/* ===== Actions ===== */
+async function init(){
+  // Load prefs from API first
+  await loadPrefs();
+
+  // Don't clear uncommitted records on page load - allow users to commit them
+  // Clearing only happens when starting a NEW analysis (in handleAnalyze)
+
+  // Reset state on load
+  get('urlBox').value = '';
+  get('logBox').innerHTML = '';
+  get('tableWrap').style.display = 'none';
+  get('charts').style.display = 'none';
+  get('foundCount').textContent = '0';
+  get('tbody').innerHTML = '';
+  rows = [];
+
+  // Reset progress
+  hideProgress();
+
+  // Reset donut charts (d1-d3 only, d4 is payment total)
+  ['d1', 'd2', 'd3'].forEach(id => {
+    drawDonut(id, 0);
+    const yesEl = get(`${id}Yes`);
+    const noEl = get(`${id}No`);
+    if(yesEl) yesEl.textContent = '0%';
+    if(noEl) noEl.textContent = '0%';
+  });
+  // Reset d4 payment total
+  const d4Amount = get('d4Amount');
+  const d4Count = get('d4Count');
+  if(d4Amount) d4Amount.textContent = '$0.00';
+  if(d4Count) d4Count.textContent = '0 forms with fees';
+  
+  // Build empty header
+  buildHeader();
+
+  // Bind event handlers (with null checks)
+  const analyzeBtn = get('analyzeBtn');
+  const stopCrawlBtn = get('stopCrawlBtn');
+  const commitBtn = get('commitBtn');
+  const reportBtn = get('reportBtn');
+  const csvBtn = get('csvBtn');
+  const urlBox = get('urlBox');
+
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', handleAnalyze);
+    analyzeBtn.disabled = false;
+  }
+
+  // Stop button - allow users to interrupt search if satisfied with results
+  if (stopCrawlBtn) {
+    stopCrawlBtn.addEventListener('click', async function() {
+      try {
+        const r = await fetch('/api/crawl/stop', { method: 'POST' });
+        const data = await r.json();
+        log(data.message || 'Stop requested');
+        this.style.display = 'none';
+      } catch(e) {
+        log('Failed to stop crawl: ' + e.message);
+      }
+    });
+  }
+
+  if (commitBtn) {
+    commitBtn.addEventListener('click', handleCommit);
+    commitBtn.disabled = false;
+  }
+
+  if (reportBtn) {
+    reportBtn.addEventListener('click', generateReport);
+    reportBtn.disabled = false;
+  }
+
+  if (csvBtn) {
+    csvBtn.addEventListener('click', exportCSV);
+    csvBtn.disabled = false;
+  }
+
+  // Plain Enter triggers Analyze, Cmd/Ctrl+Enter adds new line
+  if (urlBox) {
+    urlBox.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        // If Cmd/Ctrl is held, allow default (new line)
+        if (e.metaKey || e.ctrlKey) {
+          return;
+        }
+        // Plain Enter triggers Analyze button
+        e.preventDefault();
+        if (analyzeBtn && !analyzeBtn.disabled) {
+          analyzeBtn.click();
+        }
+      }
+    });
+  }
+
+  // Clear any stored form data
+  if(window.history && window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
+  }
+
+  // Close filter dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.filter-icon') && !e.target.closest('.filter-dropdown')) {
+      document.querySelectorAll('.filter-dropdown.show').forEach(d => d.classList.remove('show'));
+    }
+  });
+
+  // REMOVED: Auto-clear commits on page load
+  // Forms are now auto-committed during analysis, no need to clear on load
+  // autoClearCommits();
+
+  log('Ready to analyze forms');
+}
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', init);
+</script>
+
+<!-- Modals -->
+<div id="postAnalysisModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>✓ Analysis Complete!</h2>
+    </div>
+    <div class="modal-body">
+      <p><strong>Analyzed <span id="modalFormCount">0</span> forms and auto-committed to Global Genetics</strong></p>
+      <p>What would you like to do next?</p>
+      <ul>
+        <li><strong>Generate Report:</strong> Create a comprehensive HTML report with visualizations</li>
+        <li><strong>View Genetics:</strong> Go to Global Genetics to see all committed forms</li>
+        <li><strong>Run Another Batch:</strong> Clear the form and analyze more URLs</li>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="generateReportFromModal()">Generate Report</button>
+      <button class="btn" onclick="viewGeneticsFromModal()">View Genetics</button>
+      <button class="btn" onclick="runAnotherBatch()">Run Another Batch</button>
+    </div>
+  </div>
+</div>
+
+<div id="duplicateModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚠ Duplicates Detected</h2>
+    </div>
+    <div class="modal-body">
+      <p><strong><span id="duplicateCount">0</span> form(s) already exist in Global Genetics:</strong></p>
+      <div id="duplicateList" class="duplicate-list"></div>
+      <p>What would you like to do?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeDuplicateModal()">Cancel</button>
+      <button class="btn" onclick="commitSkipDuplicates()">Skip Duplicates</button>
+      <button class="btn primary" onclick="commitWithDuplicates()">Commit All Anyway</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <a href="https://www.meyerinterests.com/" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-bottom:12px">
+    <img src="/ui/meyerlogowhite.png" alt="Meyer Interests" style="height:66px;opacity:0.85;transition:opacity 0.2s;image-rendering:-webkit-optimize-contrast;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+  </a>
+  <div>&copy; Meyer Interests, LLC 2025</div>
+</footer>
+
+</body>
+</html>

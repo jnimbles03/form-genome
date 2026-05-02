@@ -1,0 +1,1908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Form Genome Project — Global Genetics</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30 20 Q35 25 40 20 L40 30 Q35 35 30 30 Z M60 20 Q65 25 70 20 L70 30 Q65 35 60 30 Z M40 20 L60 30 M30 30 L70 20 M30 40 Q35 45 40 40 L40 50 Q35 55 30 50 Z M60 40 Q65 45 70 40 L70 50 Q65 55 60 50 Z M40 40 L60 50 M30 50 L70 40 M30 60 Q35 65 40 60 L40 70 Q35 75 30 70 Z M60 60 Q65 65 70 60 L70 70 Q65 75 60 70 Z M40 60 L60 70 M30 70 L70 60 M30 80 Q35 85 40 80 M60 80 Q65 85 70 80 M40 80 L60 90 M30 90 L70 80' fill='none' stroke='%2376e0a6' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06080e; --ink:#e8eef6; --muted:#a7b3ca; --hair:#243147; --card:#1f2f46; --panel:#0f1623; --accent:#76e0a6;
+    --radius:14px; --radius-lg:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
+    --ink-dim:#a7b3ca; --acc:#76e0a6; --acc2:#76e0a6; --chip-yes:#1f8a4d; --chip-no:#5a6372; --row-hover:#1a2738;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial}
+
+  /* Orbs (in focus) */
+  #orbsCanvas{position:fixed; inset:0; z-index:0; pointer-events:none; filter:none; opacity:.75}
+
+  header{position:relative; z-index:1; padding:26px 20px 20px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;}
+  .brand h1{margin:0 0 6px; font-size:32px; font-weight:500; line-height:1.2; color:var(--accent); font-family:'Orbitron',system-ui,sans-serif; letter-spacing:.5px; text-shadow:0 2px 4px rgba(0,0,0,.4),0 4px 8px rgba(0,0,0,.2)}
+  .brand p{margin:0; color:var(--ink-dim); font-size:12px}
+  .nav a{display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:10px; border:1px solid var(--hair);
+    background:var(--card); color:var(--ink); text-decoration:none; font-weight:600; font-size:13px; transition:all .15s ease}
+  .nav a:hover{background:#263648}
+
+  .panel{position:relative; z-index:1; background:var(--card); border:1px solid var(--hair);
+    border-radius:16px; padding:14px; margin:12px 20px; box-shadow:var(--shadow)}
+
+  .toolbar{display:flex; gap:10px; justify-content:flex-end; margin-bottom:8px}
+  .btn{appearance:none; border-radius:12px; padding:10px 14px; font-weight:700; letter-spacing:.2px; cursor:pointer; border:1px solid var(--hair); color:var(--ink); background:var(--card); transition:all .15s ease; text-decoration:none}
+  .btn:hover{background:#263648}
+  .btn.primary{background:var(--accent); color:#0b1218; border:none; font-weight:700}
+  .btn.primary:hover{background:#85e9b1}
+
+  /* Donuts */
+  .charts{display:none; grid-template-columns:repeat(4,minmax(260px,1fr)); gap:16px; margin:8px 0}
+  @media (max-width:1400px){.charts{grid-template-columns:repeat(2,minmax(260px,1fr))}}
+  .donut{display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center; padding:14px; border:1px solid var(--hair); border-radius:14px; background:var(--panel)}
+  .donut h4{margin:0; color:var(--ink); font-size:14px; font-weight:600}
+  .donut .legend .row{display:flex; gap:8px; align-items:center; font-weight:600; font-size:13px}
+  .dot{width:12px; height:12px; border-radius:50%}
+  .dot.yes{background:var(--accent)} .dot.no{background:var(--muted)}
+  canvas.donut-canvas{width:180px; height:180px}
+
+  /* Table wrapper: wide horizontal scroll + vertical scroll with locked columns */
+  .table-wrap{display:none; margin-top:10px; border-radius:14px; border:1px solid var(--hair); overflow:auto; max-height:calc(100vh - 100px); box-shadow:var(--shadow); cursor:grab;
+  /* Scroll shadow gradients for intuitive horizontal scrolling */
+  background:linear-gradient(90deg,var(--panel) 30%,rgba(15,22,35,0)) left,linear-gradient(90deg,rgba(15,22,35,0),var(--panel) 70%) right,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,0.5),transparent) left,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,0.5),transparent) right;
+  background-repeat:no-repeat;
+  background-size:40px 100%,40px 100%,14px 100%,14px 100%;
+  background-attachment:local,local,scroll,scroll}
+  .table-wrap:active{cursor:grabbing}
+
+  /* Table width = sum of col widths (not clamped to 100%) */
+  table{border-collapse:separate; border-spacing:0; width:auto !important; min-width:1200px; table-layout:fixed; white-space:nowrap}
+  thead th{
+    position:sticky; top:0; z-index:10; background:var(--card); border-bottom:1px solid var(--hair); color:var(--ink);
+    font-size:11px; letter-spacing:.2px; text-transform:uppercase; padding:10px 8px; user-select:none;
+    white-space:normal !important; word-break:keep-all; overflow-wrap:break-word; line-height:1.3; height:auto; min-width:96px;
+    text-align:center;
+  }
+  thead th:first-child{position:sticky;left:0;top:0;z-index:20;text-align:left;background:var(--card);box-shadow:2px 0 4px rgba(0,0,0,0.1)}
+  tbody td{padding:8px 8px; border-bottom:1px solid var(--hair); color:var(--ink); vertical-align:top; text-align:center}
+  tbody td:first-child{position:sticky;left:0;z-index:10;text-align:left;background:var(--panel);box-shadow:2px 0 4px rgba(0,0,0,0.05)}
+  tbody tr:nth-child(2n) td:first-child{background:var(--panel)}
+  tbody tr:hover td:first-child{background:var(--card)}
+  tbody td.titleCell,tbody td.left-align{text-align:left !important}
+  tbody tr:hover{background:var(--card)} tbody tr:nth-child(2n){background:var(--panel)} tbody tr:nth-child(2n):hover{background:var(--card)}
+
+  /* drag reorder + resize */
+  th.draggable{cursor:grab} th.dragging{opacity:.65}
+  th .resize{position:absolute; right:0; top:0; bottom:0; width:7px; cursor:col-resize; z-index:3}
+
+  /* Cells */
+  .titleCell{max-width:350px !important; width:100% !important; overflow:hidden}
+  .titleText{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; line-height:1.25; word-break:break-word}
+  .langChip{margin-left:6px; padding:0 6px; border-radius:10px; background:var(--card); color:var(--accent); font-size:11px; display:inline-block}
+  .chip{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11px}
+  .chip.yes{background:#0f2419; color:var(--accent); border:1px solid #1d5a33}
+  .chip.no{background:var(--panel); color:var(--muted); border:1px solid var(--hair)}
+
+  /* Driver list styling */
+  .driver-list{padding:6px 8px !important; line-height:1.4}
+  .driver-item{display:block; font-size:12px; color:var(--ink); margin:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  /* Genome Rank chips */
+  .chip.rank-elite{background:#2d0a1f; color:#ff6bc7; border:1px solid #5c1440}
+  .chip.rank-high{background:#1a0f2e; color:#a78bfa; border:1px solid #3b2563}
+  .chip.rank-medium{background:#0f2419; color:#76e0a6; border:1px solid #1d5a33}
+  .chip.rank-low{background:#1e2530; color:#7dd3fc; border:1px solid #3b4a5c}
+  .chip.rank-basic{background:var(--panel); color:var(--muted); border:1px solid var(--hair)}
+
+  .num{text-align:right; font-variant-numeric:tabular-nums}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px}
+
+  /* Data bars */
+  .databar-cell{position:relative;padding:2px 6px !important;min-width:100px}
+  .databar-bg{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(118,224,166,0.15) 0%,rgba(118,224,166,0.05) 100%);border-radius:4px;transition:width .3s ease}
+  .databar-value{position:relative;z-index:1;font-variant-numeric:tabular-nums;font-weight:600;font-size:11px;color:var(--ink)}
+
+  .debug{margin:12px 20px 26px; padding:12px; background:var(--panel); border:1px solid var(--hair); border-radius:14px; color:var(--ink); font-family:ui-monospace,monospace; font-size:12px}
+  .hidden{display:none!important}
+
+  /* Filter UI */
+  .filter-icon{display:inline-block; margin-left:4px; opacity:.5; cursor:pointer; font-size:10px; transition:opacity .15s}
+  .filter-icon:hover{opacity:1}
+  .filter-icon.active{opacity:1; color:var(--accent)}
+
+  .filter-dropdown{position:absolute; top:100%; left:0; margin-top:4px; background:var(--card); border:1px solid var(--hair); border-radius:8px; padding:10px; min-width:200px; max-width:300px; box-shadow:0 4px 12px rgba(0,0,0,.3); z-index:100; display:none}
+  .filter-dropdown.show{display:block}
+  .filter-dropdown label{display:flex; align-items:center; gap:6px; padding:4px 0; cursor:pointer; font-size:12px; text-transform:none; white-space:nowrap}
+  .filter-dropdown label:hover{background:var(--panel); border-radius:4px; padding-left:4px; padding-right:4px}
+  .filter-dropdown input[type="checkbox"]{cursor:pointer; flex-shrink:0}
+  .filter-dropdown input[type="text"],.filter-dropdown input[type="number"]{width:100%; padding:6px 8px; border:1px solid var(--hair); border-radius:6px; background:var(--panel); color:var(--ink); font-size:12px; margin-top:4px}
+  .filter-dropdown .filter-actions{display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--hair)}
+  .filter-dropdown .filter-btn{padding:4px 10px; border-radius:6px; border:1px solid var(--hair); background:var(--panel); color:var(--ink); font-size:11px; cursor:pointer; flex:1}
+  .filter-dropdown .filter-btn:hover{background:var(--hair)}
+
+  /* Sort UI */
+  .sort-icon{display:inline-block; margin-left:4px; opacity:.3; cursor:pointer; font-size:10px; transition:opacity .15s; user-select:none}
+  .sort-icon:hover{opacity:.7}
+  .sort-icon.active{opacity:1; color:var(--accent)}
+
+  th{position:relative}
+
+  /* Footer */
+  footer{position:relative; z-index:1; text-align:right; padding:20px 30px 20px 20px; color:var(--muted); font-size:9px; opacity:0.5}
+  footer a img:hover{opacity:1}
+
+  /* Admin features */
+  .admin-only{display:none !important}
+  .admin-mode .admin-only{display:inline-flex !important}
+  .admin-checkbox{width:20px; height:20px; cursor:pointer}
+
+  /* Modal */
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--card); border:1px solid var(--hair); border-radius:16px; padding:24px; max-width:500px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  .modal h2{margin:0 0 16px; color:var(--accent); font-size:20px}
+  .modal label{display:block; margin:12px 0 4px; color:var(--ink); font-size:13px; font-weight:600}
+  .modal input,.modal select{width:100%; padding:10px 12px; border:1px solid var(--hair); border-radius:8px; background:var(--panel); color:var(--ink); font-size:14px}
+  .modal-actions{display:flex; gap:10px; margin-top:20px}
+  .modal-actions .btn{flex:1}
+
+  /* Bell Curve Charts */
+  .bell-curves{display:none; margin-top:20px; padding:20px 0}
+  .bell-curves h3{margin:0 0 16px; color:var(--accent); font-size:20px; font-weight:600; font-family:'Orbitron',system-ui,sans-serif}
+  .bell-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:16px}
+  @media (max-width:1200px){.bell-grid{grid-template-columns:1fr}}
+  .bell-chart{background:var(--panel); border:1px solid var(--hair); border-radius:14px; padding:16px}
+  .bell-chart h4{margin:0 0 12px; color:var(--ink); font-size:14px; font-weight:600; text-align:center}
+  .bell-chart canvas{width:100%!important; height:240px!important; display:block}
+  .bell-stats{display:flex; gap:16px; justify-content:center; margin-top:12px; font-size:12px}
+  .bell-stat{text-align:center}
+  .bell-stat .label{color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.5px}
+  .bell-stat .value{color:var(--accent); font-weight:700; font-size:16px; margin-top:2px}
+</style>
+<script src="https://unpkg.com/scrollbooster@3/dist/scrollbooster.min.js"></script>
+</head>
+<body>
+<canvas id="orbsCanvas"></canvas>
+
+<header>
+  <div class="brand">
+    <h1>Form Genome Project — Global Genetics</h1>
+    <p>Find revenue opportunities. Identify expense reduction. Audit compliance.</p>
+  </div>
+  <nav class="nav">
+    <a class="btn primary" href="/">Back to Dashboard</a>
+    <a href="/infographic">Methodology</a>
+    <a href="/gemini-guide">🔮 Gemini Gem</a>
+  </nav>
+</header>
+
+<section class="panel">
+  <div class="toolbar">
+    <div style="flex:1; display:flex; align-items:center; gap:8px;">
+      <span id="formCount" style="font-weight:600; color:var(--accent); font-size:15px; font-family:'Orbitron',system-ui,sans-serif;">0 forms</span>
+      <span id="filterCount" style="font-size:13px; color:var(--muted); display:none;"></span>
+    </div>
+    <div id="paginationInfo" style="font-size:13px; color:var(--muted); display:none;"></div>
+    <button id="prevPageBtn" class="btn" style="display:none">← Prev</button>
+    <button id="nextPageBtn" class="btn" style="display:none">Next →</button>
+    <input id="adminPin" type="password" placeholder="Admin PIN" style="display:none; width:120px; padding:8px 12px; border:1px solid var(--hair); border-radius:8px; background:var(--panel); color:var(--ink); font-size:13px"/>
+    <button id="adminLoginBtn" class="btn" style="display:none">Admin Mode</button>
+    <button id="editSelectedBtn" class="btn admin-only">Edit Selected</button>
+    <button id="deleteSelectedBtn" class="btn admin-only">Delete Selected</button>
+    <button id="clearFiltersBtn" class="btn" style="display:none">Clear All Filters</button>
+    <button id="csvBtn" class="btn admin-only">Export CSV</button>
+    <button id="jsonBtn" class="btn admin-only">Export JSON</button>
+  </div>
+
+  <!-- Donuts -->
+  <div id="charts" class="charts">
+    <div class="donut">
+      <div>
+        <h4 id="d1Title">Notarization Required</h4>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d1Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d1No">0%</strong></span></div>
+        </div>
+      </div>
+      <canvas id="d1" class="donut-canvas" width="180" height="180"></canvas>
+    </div>
+    <div class="donut">
+      <div>
+        <h4 id="d2Title">Attachments Required</h4>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d2Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d2No">0%</strong></span></div>
+        </div>
+      </div>
+      <canvas id="d2" class="donut-canvas" width="180" height="180"></canvas>
+    </div>
+    <div class="donut">
+      <div>
+        <h4 id="d3Title">Conditional Logic</h4>
+        <div class="legend">
+          <div class="row"><span class="dot yes"></span><span>Yes — <strong id="d3Yes">0%</strong></span></div>
+          <div class="row"><span class="dot no"></span><span>No — <strong id="d3No">0%</strong></span></div>
+        </div>
+      </div>
+      <canvas id="d3" class="donut-canvas" width="180" height="180"></canvas>
+    </div>
+    <div class="donut" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+      <h4 style="margin:0 0 12px;font-size:14px;color:var(--ink);font-weight:600;">Total Payment Fees</h4>
+      <div id="d4Amount" style="font-size:42px;font-weight:700;color:var(--accent);font-family:'Orbitron',system-ui,sans-serif;margin:12px 0;">$0</div>
+      <div id="d4Count" style="font-size:13px;color:var(--muted);margin-top:4px;">0 forms with fees</div>
+    </div>
+  </div>
+
+  <!-- Bell Curve Charts -->
+  <div id="bellCurves" class="bell-curves">
+    <h3>Complexity Score Distributions</h3>
+    <div class="bell-grid">
+      <!-- Overall Distribution -->
+      <div class="bell-chart">
+        <h4>All Forms</h4>
+        <canvas id="bellAll"></canvas>
+        <div class="bell-stats">
+          <div class="bell-stat">
+            <div class="label">Count</div>
+            <div class="value" id="bellAllCount">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Mean</div>
+            <div class="value" id="bellAllMean">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Median</div>
+            <div class="value" id="bellAllMedian">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Services -->
+      <div class="bell-chart">
+        <h4>Financial Services (FINS)</h4>
+        <canvas id="bellFINS"></canvas>
+        <div class="bell-stats">
+          <div class="bell-stat">
+            <div class="label">Count</div>
+            <div class="value" id="bellFINSCount">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Mean</div>
+            <div class="value" id="bellFINSMean">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Median</div>
+            <div class="value" id="bellFINSMedian">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Healthcare & Life Sciences -->
+      <div class="bell-chart">
+        <h4>Healthcare & Life Sciences (HLS)</h4>
+        <canvas id="bellHLS"></canvas>
+        <div class="bell-stats">
+          <div class="bell-stat">
+            <div class="label">Count</div>
+            <div class="value" id="bellHLSCount">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Mean</div>
+            <div class="value" id="bellHLSMean">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Median</div>
+            <div class="value" id="bellHLSMedian">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Public Sector -->
+      <div class="bell-chart">
+        <h4>Public Sector (PUBSEC)</h4>
+        <canvas id="bellPUBSEC"></canvas>
+        <div class="bell-stats">
+          <div class="bell-stat">
+            <div class="label">Count</div>
+            <div class="value" id="bellPUBSECCount">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Mean</div>
+            <div class="value" id="bellPUBSECMean">0</div>
+          </div>
+          <div class="bell-stat">
+            <div class="label">Median</div>
+            <div class="value" id="bellPUBSECMedian">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data table pagination -->
+  <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:12px 0; margin-top:20px;">
+    <div id="paginationInfo2" style="font-size:13px; color:var(--muted); display:none;"></div>
+    <button id="prevPageBtn2" class="btn" style="display:none">← Prev</button>
+    <button id="nextPageBtn2" class="btn" style="display:none">Next →</button>
+  </div>
+
+  <!-- Data table -->
+  <div id="tableWrap" class="table-wrap">
+    <table id="grid">
+      <colgroup id="colgroup"></colgroup>
+      <thead><tr id="theadRow"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div id="debug" class="debug hidden"></div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <h2>Edit Record</h2>
+    <label>Entity Name</label>
+    <input id="editEntityName" type="text"/>
+    <label>Form Name</label>
+    <input id="editFormName" type="text"/>
+    <label>Industry Vertical</label>
+    <input id="editVertical" type="text"/>
+    <label>Industry Sub-vertical</label>
+    <input id="editSubvertical" type="text"/>
+    <div class="modal-actions">
+      <button id="saveEditBtn" class="btn primary">Save</button>
+      <button id="cancelEditBtn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Orbs ---------- */
+window.addEventListener('load', ()=>{
+  const c=document.getElementById('orbsCanvas'); if(!c) return;
+  const x=c.getContext('2d');
+  function rs(){ c.width=innerWidth; c.height=innerHeight; } rs(); addEventListener('resize',rs);
+  class O{ constructor(){ this.r=Math.random()*3+1; this.x=Math.random()*c.width; this.y=Math.random()*c.height; this.dx=(Math.random()-.5)*.6; this.dy=(Math.random()-.5)*.6; }
+    step(){ this.x+=this.dx; this.y+=this.dy; if(this.x<0||this.x>c.width)this.dx*=-1; if(this.y<0||this.y>c.height)this.dy*=-1; }
+    draw(){ const g=x.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*20); g.addColorStop(0,'#76e0a6'); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(this.x-this.r*20,this.y-this.r*20,this.r*40,this.r*40); } }
+  const orbs=[...Array(50)].map(()=>new O());
+  (function loop(){ x.clearRect(0,0,c.width,c.height); x.fillStyle='#06080e'; x.fillRect(0,0,c.width,c.height); orbs.forEach(o=>{o.step();o.draw();}); requestAnimationFrame(loop); })();
+});
+
+/* ---------- Utils ---------- */
+const get=id=>document.getElementById(id);
+const BC=new BroadcastChannel('fgp_prefs');
+async function getJSON(u){ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+function download(name, content, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); }
+
+/* ---------- Columns + prefs ---------- */
+// Complete column definitions (synced with index.html)
+// Ordered: Form Title (frozen), then Entity, Vertical, Sub-Vertical, Scores, Action Type, then by impact
+const COLS=[
+  {key:'form_name',label:'Form Title',type:'title'},
+  {key:'_select',label:'Select',type:'checkbox'},
+  {key:'entity_name',label:'Entity Name',type:'picklist'},
+  {key:'region',label:'Region',type:'picklist'},
+  {key:'industry_vertical',label:'Industry Vertical',type:'picklist'},
+  {key:'industry_subvertical',label:'Industry Sub-vertical',type:'picklist'},
+  {key:'complexity_score',label:'Complexity Score',type:'databar'},
+  {key:'nigo_score',label:'NIGO Score',type:'databar'},
+  {key:'genome_rank',label:'Genome Rank',type:'rank'},
+  {key:'action_type',label:'Action Type',type:'picklist'},
+  {key:'business_impact',label:'Business Impact',type:'picklist'},
+  {key:'instructions_included',label:'Instructions',type:'bool'},
+  {key:'notarization_required',label:'Notarization Required',type:'bool'},
+  {key:'third_party_involved',label:'Third Party Involved',type:'bool'},
+  {key:'witnesses_required',label:'Witnesses Required',type:'bool'},
+  {key:'attachments_required',label:'Attachments Required',type:'bool'},
+  {key:'identification_required',label:'ID Required',type:'bool'},
+  {key:'conditional_logic',label:'Conditional Logic',type:'bool'},
+  {key:'deadlines_present',label:'Deadlines Present',type:'bool'},
+  {key:'payment_required',label:'Payment Required',type:'bool'},
+  {key:'payment_amount',label:'Payment Amount',type:'num'},
+  {key:'form_dependencies',label:'Form Dependencies',type:'bool'},
+  {key:'special_requirements',label:'Special Requirements',type:'text'},
+  {key:'key_drivers',label:'Key Drivers',type:'text'},
+  {key:'signature_analysis.signature_count',label:'Signatures',type:'num'},
+  {key:'field_count',label:'Field Count',type:'num'},
+  {key:'text_fields',label:'Text Fields',type:'num'},
+  {key:'checkboxes',label:'Checkboxes',type:'num'},
+  {key:'dropdowns',label:'Dropdowns',type:'num'},
+  {key:'data_validation_fields',label:'Data Validation Fields',type:'num'},
+  {key:'estimated_signer_time',label:'Estimated Signer Time',type:'num'},
+  {key:'estimated_processing_time',label:'Estimated Processing Time',type:'num'},
+  {key:'pages',label:'Pages',type:'num'},
+  {key:'language_count',label:'Language Count',type:'num'},
+  {key:'same_domain',label:'Same Domain',type:'bool'},
+  {key:'timestamp',label:'Timestamp',type:'num'},
+  {key:'source_url',label:'Source URL',type:'link'},
+  {key:'click_to_agree',label:'Click to Agree',type:'bool'}
+];
+
+let colOrder = COLS.map(c=>c.key);
+let colWidths = {};
+let donutConfig = {d1:'action_type', d2:'notarization_required', d3:'conditional_logic', d4:'payment_total'};
+let activeFilters = {}; // {columnKey: filterValue}
+let sortState = {column: null, direction: null}; // {column: key, direction: 'asc'|'desc'}
+
+// Load prefs from API
+async function loadPrefs(){
+  try{
+    const prefs = await getJSON('/api/admin/ui_prefs');
+    if(prefs.col_order && prefs.col_order.length > 0){ colOrder = prefs.col_order; }
+    if(prefs.col_widths){ colWidths = prefs.col_widths; }
+    if(prefs.donut_config){ donutConfig = prefs.donut_config; }
+  }catch(e){
+    console.warn('Failed to load prefs, using defaults:', e);
+  }
+}
+
+BC.onmessage = ev=>{
+  const m=ev.data||{};
+  if(m.type==='prefs_updated' && (m.kind==='order' || m.kind==='widths')){
+    console.log('[BroadcastChannel] Prefs updated, reloading...');
+    setTimeout(() => location.reload(), 300);
+  }
+};
+function saveOrderLocal(order){ console.warn('Column order now managed in Admin panel'); }
+function saveWidthsLocal(widths){ console.warn('Column widths now managed in Admin panel'); }
+
+/* ---------- Wide scroll: colgroup + table width = sum(columns) ---------- */
+function pxToNum(v){ if(v==null) return 0; if(typeof v==='number') return v; const m=String(v).match(/([\d.]+)/); return m? Math.max(0,parseFloat(m[1])):0; }
+const DEFAULT_COL_WIDTHS = {
+  '_select':50,'form_name':180,'pages':96,'complexity_score':120,'nigo_score':110,'signature_analysis.signature_count':120,
+  'attachments_required':128,'notarization_required':128,'conditional_logic':128,'deadlines_present':128,'third_party_involved':128,
+  'field_count':110,'text_fields':110,'checkboxes':110,'dropdowns':110,'language_count':100,
+  'estimated_signer_time':140,'estimated_processing_time':160,'action_type':220,'business_impact':140,
+  'same_domain':110,'witnesses_required':120,'identification_required':120,'click_to_agree':120,'payment_required':120,'payment_amount':120,'form_dependencies':140,
+  'industry_vertical':140,'industry_subvertical':160,'key_drivers':220,'special_requirements':240,'timestamp':120,'source_url':120
+};
+function applyColgroupAndWidth(order, widths, tableId, colgroupId){
+  const cg=get(colgroupId); if(!cg) return; cg.innerHTML='';
+  let total=0;
+  for(const key of order){
+    // Skip checkbox column if not in admin mode
+    if(key === '_select' && !isAdminMode) continue;
+
+    const col=document.createElement('col');
+    const base=(widths&&widths[key])? widths[key] : DEFAULT_COL_WIDTHS[key];
+    // enforce minimums; title gets more space
+    const min = (key==='form_name') ? 150 : (key==='_select' ? 50 : 96);
+    const w   = Math.max(min, pxToNum(base) || min);
+    col.style.width = w + 'px'; total += w; cg.appendChild(col);
+  }
+  const table=get(tableId);
+  if(table) table.style.width = Math.max(total, 1200) + 'px'; // never collapse
+}
+
+/* ---------- Filter Functions ---------- */
+function createFilterDropdown(key, spec) {
+  const dropdown = document.createElement('div');
+  dropdown.className = 'filter-dropdown';
+
+  if (spec.type === 'bool') {
+    // Boolean filter: Yes/No checkboxes
+    dropdown.innerHTML = `
+      <label><input type="checkbox" value="true" ${activeFilters[key]?.includes('true') ? 'checked' : ''}> Yes</label>
+      <label><input type="checkbox" value="false" ${activeFilters[key]?.includes('false') ? 'checked' : ''}> No</label>
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      if (checked.length > 0 && checked.length < 2) {
+        activeFilters[key] = checked;
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+  } else if (spec.type === 'picklist') {
+    // Picklist filter: Extract unique values from ENTIRE database (not just current page)
+    const uniqueValues = new Set();
+    allRecordsForCharts.forEach(row => {
+      const val = key.includes('.') ?
+        key.split('.').reduce((obj, k) => (obj != null ? obj[k] : undefined), row) :
+        row[key];
+      if (val !== null && val !== undefined && val !== '') {
+        uniqueValues.add(String(val));
+      }
+    });
+
+    const sortedValues = Array.from(uniqueValues).sort((a, b) => a.localeCompare(b));
+
+    let html = '<div style="max-height:300px; overflow-y:auto;">';
+    sortedValues.forEach(val => {
+      const checked = activeFilters[key]?.includes(val) ? 'checked' : '';
+      html += `<label><input type="checkbox" value="${val.replace(/"/g, '&quot;')}" ${checked}> ${val}</label>`;
+    });
+    html += `</div>
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+    dropdown.innerHTML = html;
+
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      if (checked.length > 0) {
+        activeFilters[key] = checked;
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+  } else if (spec.type === 'text' || spec.type === 'title') {
+    // Text filter: search input
+    dropdown.innerHTML = `
+      <input type="text" placeholder="Search..." value="${activeFilters[key] || ''}">
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    const input = dropdown.querySelector('input[type="text"]');
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const val = input.value.trim();
+      if (val) {
+        activeFilters[key] = val.toLowerCase();
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') dropdown.querySelector('.apply').click();
+    });
+  } else if (spec.type === 'num') {
+    // Numeric filter: min/max inputs
+    const current = activeFilters[key] || {};
+    dropdown.innerHTML = `
+      <div style="margin-bottom:6px"><input type="number" placeholder="Min" value="${current.min ?? ''}" id="min-${key}"></div>
+      <div><input type="number" placeholder="Max" value="${current.max ?? ''}" id="max-${key}"></div>
+      <div class="filter-actions">
+        <button class="filter-btn apply">Apply</button>
+        <button class="filter-btn clear">Clear</button>
+      </div>
+    `;
+
+    dropdown.querySelector('.apply').addEventListener('click', () => {
+      const min = dropdown.querySelector(`#min-${key}`).value;
+      const max = dropdown.querySelector(`#max-${key}`).value;
+      if (min || max) {
+        activeFilters[key] = { min: min ? parseFloat(min) : undefined, max: max ? parseFloat(max) : undefined };
+      } else {
+        delete activeFilters[key];
+      }
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+
+    dropdown.querySelector('.clear').addEventListener('click', () => {
+      delete activeFilters[key];
+      dropdown.classList.remove('show');
+      applyFilters();
+      buildHeader();
+    });
+  }
+
+  return dropdown;
+}
+
+function applyFilters() {
+  // Filter against ENTIRE database (allRecordsForCharts), not just current page
+  const filteredRows = allRecordsForCharts.filter(row => {
+    for (const [key, filterValue] of Object.entries(activeFilters)) {
+      const spec = COLS.find(c => c.key === key);
+      if (!spec) continue;
+
+      const cellValue = key.includes('.') ?
+        key.split('.').reduce((obj, k) => (obj != null ? obj[k] : undefined), row) :
+        row[key];
+
+      if (spec.type === 'bool') {
+        const boolVal = cellValue ? 'true' : 'false';
+        if (!filterValue.includes(boolVal)) return false;
+      } else if (spec.type === 'picklist') {
+        // Picklist: filterValue is an array of selected values
+        const textVal = String(cellValue || '');
+        if (!filterValue.includes(textVal)) return false;
+      } else if (spec.type === 'text' || spec.type === 'title') {
+        const textVal = String(cellValue || '').toLowerCase();
+        if (!textVal.includes(filterValue)) return false;
+      } else if (spec.type === 'num') {
+        const numVal = parseFloat(cellValue);
+        if (isNaN(numVal)) return false;
+        if (filterValue.min !== undefined && numVal < filterValue.min) return false;
+        if (filterValue.max !== undefined && numVal > filterValue.max) return false;
+      }
+    }
+    return true;
+  });
+
+  // Update allRows with filtered results for rendering
+  allRows = filteredRows;
+  rows = filteredRows;
+  renderRows(rows);
+  updateStats();
+  updateClearFiltersButton();
+}
+
+function updateStats() {
+  const formCountEl = document.getElementById('formCount');
+  const filterCountEl = document.getElementById('filterCount');
+
+  // Use totalRecords from pagination for accurate count
+  const total = totalRecords || allRows.length;
+  const filtered = rows.length;
+
+  formCountEl.textContent = `${total.toLocaleString()} form${total !== 1 ? 's' : ''}`;
+
+  if (Object.keys(activeFilters).length > 0 && filtered !== total) {
+    filterCountEl.textContent = `(showing ${filtered})`;
+    filterCountEl.style.display = 'inline';
+  } else {
+    filterCountEl.style.display = 'none';
+  }
+}
+
+function updatePaginationControls() {
+  // Get both sets of pagination controls
+  const paginationInfo = get('paginationInfo');
+  const prevBtn = get('prevPageBtn');
+  const nextBtn = get('nextPageBtn');
+  const paginationInfo2 = get('paginationInfo2');
+  const prevBtn2 = get('prevPageBtn2');
+  const nextBtn2 = get('nextPageBtn2');
+
+  if (totalPages <= 1) {
+    // Hide pagination controls if only one page
+    paginationInfo.style.display = 'none';
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    paginationInfo2.style.display = 'none';
+    prevBtn2.style.display = 'none';
+    nextBtn2.style.display = 'none';
+    return;
+  }
+
+  // Show pagination controls
+  paginationInfo.style.display = 'inline';
+  prevBtn.style.display = 'inline-block';
+  nextBtn.style.display = 'inline-block';
+  paginationInfo2.style.display = 'inline';
+  prevBtn2.style.display = 'inline-block';
+  nextBtn2.style.display = 'inline-block';
+
+  // Update pagination info text
+  const start = (currentPage - 1) * pageLimit + 1;
+  const end = Math.min(currentPage * pageLimit, totalRecords);
+  const paginationText = `${start}-${end} of ${totalRecords}`;
+  paginationInfo.textContent = paginationText;
+  paginationInfo2.textContent = paginationText;
+
+  // Enable/disable buttons based on current page
+  const isPrevDisabled = currentPage === 1;
+  const isNextDisabled = currentPage === totalPages;
+
+  prevBtn.disabled = isPrevDisabled;
+  nextBtn.disabled = isNextDisabled;
+  prevBtn2.disabled = isPrevDisabled;
+  nextBtn2.disabled = isNextDisabled;
+
+  // Style disabled buttons (both sets)
+  [prevBtn, prevBtn2].forEach(btn => {
+    if (btn.disabled) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  });
+
+  [nextBtn, nextBtn2].forEach(btn => {
+    if (btn.disabled) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  });
+}
+
+async function goToPreviousPage() {
+  if (currentPage > 1) {
+    await loadCommitted(currentPage - 1);
+  }
+}
+
+async function goToNextPage() {
+  if (currentPage < totalPages) {
+    await loadCommitted(currentPage + 1);
+  }
+}
+
+function updateClearFiltersButton() {
+  const btn = document.getElementById('clearFiltersBtn');
+  if (Object.keys(activeFilters).length > 0) {
+    btn.style.display = 'inline-block';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function clearAllFilters() {
+  activeFilters = {};
+  rows = allRows;
+  renderRows(rows);
+  updateStats();
+  buildHeader();
+  updateClearFiltersButton();
+}
+
+function sortByColumn(columnKey, direction) {
+  if (!direction) {
+    // Clear sort
+    sortState = {column: null, direction: null};
+    rows = [...allRows];
+    if (Object.keys(activeFilters).length > 0) {
+      applyFilters();
+    } else {
+      renderRows(rows);
+      updateStats();
+    }
+    buildHeader();
+    return;
+  }
+
+  sortState = {column: columnKey, direction};
+
+  const sorted = [...rows].sort((a, b) => {
+    const aVal = columnKey.split('.').reduce((o, k) => (o != null ? o[k] : undefined), a);
+    const bVal = columnKey.split('.').reduce((o, k) => (o != null ? o[k] : undefined), b);
+
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+
+    // Handle null/undefined
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+
+    // Numeric comparison
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return direction === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+
+    return 0;
+  });
+
+  renderRows(sorted);
+  buildHeader();
+}
+
+let allRows = []; // Keep original unfiltered data for current page
+let allRecordsForCharts = []; // ALL committed records for charts (not paginated)
+
+/* ---------- Admin State ---------- */
+let isAdminMode = false;
+let adminPin = '';
+let selectedIds = new Set();
+
+/* ---------- Build header (wrap labels + drag/resize) ---------- */
+function buildHeader(){
+  const tr=get('theadRow'); tr.innerHTML='';
+  colOrder.forEach((key,idx)=>{
+    const spec=COLS.find(c=>c.key===key); if(!spec) return;
+
+    // Skip checkbox column if not in admin mode
+    if(spec.type === 'checkbox' && !isAdminMode) return;
+
+    const th=document.createElement('th'); th.setAttribute('data-col',key); th.classList.add('draggable'); th.draggable=true;
+
+    // Checkbox column header
+    if(spec.type === 'checkbox'){
+      const selectAllCb = document.createElement('input');
+      selectAllCb.type = 'checkbox';
+      selectAllCb.className = 'admin-checkbox';
+      selectAllCb.id = 'selectAllCheckbox';
+      selectAllCb.addEventListener('change', e => {
+        document.querySelectorAll('.row-checkbox').forEach(cb => {
+          cb.checked = e.target.checked;
+          const id = cb.getAttribute('data-id');
+          if(e.target.checked) selectedIds.add(id);
+          else selectedIds.delete(id);
+        });
+      });
+      th.appendChild(selectAllCb);
+      tr.appendChild(th);
+      return;
+    }
+
+    // Clean two-row wrap (no stray '>')
+    const wrapped = spec.label.replace(/\s+/g,' ')
+      .replace(/\b(Time|Score|Required|Count|Analysis|Logic|Present|Vertical|Sub-vertical)\b/, '<br>$1');
+
+    const headerSpan = document.createElement('span');
+    headerSpan.innerHTML = wrapped;
+
+    // Add sort icon for numeric columns
+    if (spec.type === 'num') {
+      const sortIcon = document.createElement('span');
+      sortIcon.className = 'sort-icon' + (sortState.column === key ? ' active' : '');
+      sortIcon.innerHTML = sortState.column === key ? (sortState.direction === 'asc' ? '▲' : '▼') : '↕';
+      sortIcon.title = 'Sort';
+
+      sortIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (sortState.column === key) {
+          // Toggle: asc -> desc -> none
+          if (sortState.direction === 'asc') {
+            sortByColumn(key, 'desc');
+          } else {
+            sortByColumn(key, null);
+          }
+        } else {
+          sortByColumn(key, 'asc');
+        }
+      });
+
+      headerSpan.appendChild(sortIcon);
+    }
+
+    // Add filter icon (all filterable columns)
+    const filterIcon = document.createElement('span');
+    filterIcon.className = 'filter-icon' + (activeFilters[key] ? ' active' : '');
+    filterIcon.innerHTML = '▼';
+    filterIcon.title = 'Filter';
+    headerSpan.appendChild(filterIcon);
+
+    th.appendChild(headerSpan);
+
+    // Filter dropdown
+    const filterDropdown = createFilterDropdown(key, spec);
+    th.appendChild(filterDropdown);
+
+    // Toggle filter dropdown
+    filterIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close other dropdowns
+      document.querySelectorAll('.filter-dropdown.show').forEach(d => {
+        if (d !== filterDropdown) d.classList.remove('show');
+      });
+      filterDropdown.classList.toggle('show');
+    });
+
+    // Resize
+    const rz=document.createElement('div'); rz.className='resize'; let resizing=false,startX=0,startW=0;
+    const move=ev=>{ if(!resizing) return; const dx=(ev.clientX||0)-startX; const w=Math.max(54,Math.min(560,startW+dx)); colWidths[key]=`${w}px`; applyColgroupAndWidth(colOrder,colWidths,'grid','colgroup'); };
+    const up=()=>{ if(!resizing) return; resizing=false; document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveWidthsLocal(colWidths); };
+    rz.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); resizing=true; startX=e.clientX; const col=get('colgroup').children[idx]; startW=(col&&col.offsetWidth)||Math.max(54, th.getBoundingClientRect().width); document.addEventListener('pointermove',move); document.addEventListener('pointerup',up); });
+    th.appendChild(rz);
+
+    // Reorder
+    th.addEventListener('dragstart',e=>{ if(resizing){e.preventDefault();return;} th.classList.add('dragging'); e.dataTransfer.setData('text/plain',key); e.dataTransfer.effectAllowed='move'; });
+    th.addEventListener('dragend',()=> th.classList.remove('dragging'));
+    th.addEventListener('dragover',e=> e.preventDefault());
+    th.addEventListener('drop',e=>{
+      e.preventDefault();
+      const fromKey=e.dataTransfer.getData('text/plain'); if(!fromKey||fromKey===key) return;
+      const from=colOrder.indexOf(fromKey), to=colOrder.indexOf(key);
+      colOrder.splice(to,0, ...colOrder.splice(from,1));
+      saveOrderLocal(colOrder);
+      buildHeader(); applyColgroupAndWidth(colOrder,colWidths,'grid','colgroup'); renderRows(rows);
+    });
+
+    tr.appendChild(th);
+  });
+  applyColgroupAndWidth(colOrder,colWidths,'grid','colgroup');
+}
+
+/* ---------- Render rows ---------- */
+let rows=[];
+function normalizeTitle(s){
+  // Start with basic cleanup
+  s = (s||'').toString().trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g,'')  // Remove zero-width chars
+    .replace(/[–—]/g,'-');                  // Normalize dashes
+
+  // Remove URL fragments and paths (http://, file://, C:\, etc.)
+  s = s.replace(/^(https?:\/\/|file:\/\/|[a-z]:\\)/i, '');
+  s = s.replace(/[\/\\]([^\/\\]+)$/, '$1'); // Keep only filename from path
+
+  // Remove file extensions (single and double extensions)
+  // Handles: .pdf, .pdfdf, .pmd, .pmdmd, .wpd, .wpdOB, .doc, .docx, etc.
+  s = s.replace(/\.(pdf|pmd|wpd|doc|docx|xls|xlsx|txt|rtf|odt|ods)(pdf|pmd|wpd|doc|docx|OB|df|md)?$/i, '');
+
+  // Clean up common filename artifacts
+  s = s.replace(/_+/g, ' ')                  // Underscores to spaces
+    .replace(/\s*-\s*/g, ' — ')              // Normalize dashes with spaces
+    .replace(/\s{2,}/g, ' ')                 // Collapse multiple spaces
+    .replace(/\s+—\s+—\s+/g, ' — ')          // Remove duplicate separators
+    .trim();
+
+  // Remove duplicated words (case-insensitive)
+  // E.g., "Gift Pledge Form — Gift — Pledge — Form" → "Gift Pledge Form"
+  const words = s.split(/\s+—\s+/);
+  if (words.length > 1) {
+    const seen = new Set();
+    const unique = [];
+    for (const word of words) {
+      const lower = word.toLowerCase().trim();
+      if (lower && !seen.has(lower)) {
+        seen.add(lower);
+        unique.push(word.trim());
+      }
+    }
+    s = unique.join(' — ');
+  }
+
+  // Handle form numbers at start (e.g., "W-2", "1040", "SF-813")
+  // Keep them as-is, but clean the rest
+  const formNumberMatch = s.match(/^([A-Z]+-?\d+|^\d{2,}[\w.-]*)\s+—\s+(.+)/i);
+  if (formNumberMatch) {
+    const formNum = formNumberMatch[1].toUpperCase();
+    const formName = formNumberMatch[2];
+    // Title case the name part only
+    const titleCased = titleCaseWords(formName);
+    s = `${formNum} — ${titleCased}`;
+  } else {
+    // Title case entire string if no form number
+    s = titleCaseWords(s);
+  }
+
+  // Final cleanup
+  s = s.replace(/\s{2,}/g, ' ')              // Final space collapse
+    .replace(/\s*—\s*/g, ' — ')              // Normalize separators
+    .trim();
+
+  return s || 'Untitled Form';
+}
+
+// Helper function for title casing with smart handling
+function titleCaseWords(str) {
+  if (str.length > 140) return str; // Don't title-case very long strings
+
+  const smallWords = /^(and|of|the|for|a|an|to|in|on|at|by|or|from|with|as|vs|de|la|el)$/i;
+
+  return str.replace(/\b([A-Za-z][A-Za-z']*)\b/g, (match, word) => {
+    // Keep acronyms uppercase (e.g., IRS, LLC)
+    if (word.length <= 4 && word === word.toUpperCase()) return word;
+
+    // Small words lowercase (except at start)
+    if (smallWords.test(word)) return word.toLowerCase();
+
+    // Title case normal words
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+}
+function actionType(r){
+  const sig=+(r?.signature_analysis?.signature_count ?? r?.signature_count ?? 0);
+  const notary=!!r?.notarization_required || !!r?.witnesses_required || !!r?.click_to_agree;
+  const info=(+r?.field_count>0)||!!r?.attachments_required||!!r?.identification_required;
+  if(sig>0||notary) return 'Signature Required';
+  if(info) return 'Information Collection (No Signature)';
+  return 'Disclosure (No Signature, No Info Collection)';
+}
+function renderRows(data){
+  // Calculate genome ranks based on complexity score distribution
+  const scores = data.map(r => r.complexity_score || 0).filter(s => s > 0).sort((a,b) => a - b);
+
+  // Calculate max values for databars
+  const maxComplexity = Math.max(...data.map(r => r.complexity_score || 0), 100);
+  const maxNigo = Math.max(...data.map(r => r.nigo_score || 0), 100);
+
+  rows = data.map(r => {
+    if (!r.action_type) r.action_type = actionType(r);
+
+    // Calculate percentile rank
+    const score = r.complexity_score || 0;
+    if (score > 0 && scores.length > 0) {
+      const rank = scores.filter(s => s < score).length;
+      const percentile = Math.round((rank / scores.length) * 100);
+
+      // Categorize by percentile
+      if (percentile >= 90) r.genome_rank = 'Top 10%';
+      else if (percentile >= 75) r.genome_rank = 'Top 25%';
+      else if (percentile >= 50) r.genome_rank = 'Top 50%';
+      else if (percentile >= 25) r.genome_rank = 'Bottom 50%';
+      else r.genome_rank = 'Bottom 25%';
+    } else {
+      r.genome_rank = '—';
+    }
+
+    return r;
+  });
+
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+
+  for (const r of rows){
+    const tr = document.createElement('tr');
+
+    for (const key of colOrder){
+      const spec = COLS.find(c => c.key === key);
+      if (!spec) continue;
+
+      // Skip checkbox column if not in admin mode
+      if(spec.type === 'checkbox' && !isAdminMode) continue;
+
+      const td = document.createElement('td');
+
+      // Checkbox cell
+      if(spec.type === 'checkbox'){
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'admin-checkbox row-checkbox';
+        cb.setAttribute('data-id', r.id);
+        cb.checked = selectedIds.has(r.id);
+        cb.addEventListener('change', e => {
+          if(e.target.checked) selectedIds.add(r.id);
+          else selectedIds.delete(r.id);
+        });
+        td.appendChild(cb);
+        tr.appendChild(td);
+        continue;
+      }
+
+      if (spec.type === 'title'){
+        td.className = 'titleCell';
+        const t = normalizeTitle(r.form_name || r.title || '');
+        td.title = t;
+        const span = document.createElement('span');
+        span.className = 'titleText';
+        span.textContent = t;
+        td.appendChild(span);
+
+        // Show error indicator if parse_error exists
+        if (r.parse_error) {
+          const errorIcon = document.createElement('span');
+          errorIcon.className = 'errorIcon';
+          errorIcon.textContent = '⚠';
+          errorIcon.title = `Error: ${r.parse_error}`;
+          errorIcon.style.color = '#ff6b6b';
+          errorIcon.style.marginLeft = '6px';
+          errorIcon.style.cursor = 'help';
+          td.appendChild(errorIcon);
+        }
+
+        const lang = +(r.language_count || 0);
+        if (lang > 1){
+          const chip = document.createElement('span');
+          chip.className = 'langChip';
+          chip.textContent = `x${lang}`;
+          td.appendChild(chip);
+        }
+
+      } else if (spec.type === 'bool'){
+        const v = !!key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), r);
+        const chip = document.createElement('span');
+        chip.className = `chip ${v ? 'yes' : 'no'}`;
+        chip.textContent = v ? '✓ Yes' : '— No';
+        td.appendChild(chip);
+
+      } else if (spec.type === 'num'){
+        const v = key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), r);
+        td.className = 'num';
+        // Format timestamp as readable date
+        if (key === 'timestamp' && v != null && v !== '') {
+          const date = new Date(v * 1000); // Unix timestamp to milliseconds
+          const formatted = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          td.textContent = formatted;
+          td.title = date.toLocaleString();
+        } else {
+          td.textContent = (v == null || v === '') ? '—' : String(v);
+        }
+
+      } else if (spec.type === 'databar'){
+        const v = key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), r);
+        const numVal = parseFloat(v) || 0;
+        const maxVal = key === 'complexity_score' ? maxComplexity : maxNigo;
+        const widthPct = maxVal > 0 ? Math.min(100, (numVal / maxVal) * 100) : 0;
+
+        td.className = 'databar-cell';
+        const bg = document.createElement('div');
+        bg.className = 'databar-bg';
+        bg.style.width = widthPct + '%';
+        td.appendChild(bg);
+
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'databar-value';
+        valueSpan.textContent = (v == null || v === '') ? '—' : String(Math.round(numVal));
+        td.appendChild(valueSpan);
+
+      } else if (spec.type === 'rank'){
+        const rankText = r.genome_rank || '—';
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+
+        // Color-code based on rank
+        if (rankText === 'Top 10%') chip.className = 'chip rank-elite';
+        else if (rankText === 'Top 25%') chip.className = 'chip rank-high';
+        else if (rankText === 'Top 50%') chip.className = 'chip rank-medium';
+        else if (rankText === 'Bottom 50%') chip.className = 'chip rank-low';
+        else if (rankText === 'Bottom 25%') chip.className = 'chip rank-basic';
+        else chip.className = 'chip';
+
+        chip.textContent = rankText;
+        td.appendChild(chip);
+
+      } else if (spec.type === 'link'){
+        const a = document.createElement('a');
+        a.href = r.source_url || '';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'View';
+        a.className = 'mono';
+        td.appendChild(a);
+
+      } else {
+        let v = key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), r);
+        if (v == null || v === '') v = '—';
+
+        // Pretty format arrays for key_drivers and special_requirements
+        if (typeof v === 'object' && Array.isArray(v)) {
+          if (v.length === 0) {
+            v = '—';
+          } else {
+            // Create bullet list for arrays
+            const items = v.map(item => {
+              const span = document.createElement('span');
+              span.className = 'driver-item';
+              span.textContent = `• ${item}`;
+              return span;
+            });
+            td.className = 'driver-list';
+            items.forEach(item => td.appendChild(item));
+            td.title = v.join(', ');
+            v = null; // Don't set textContent since we added elements
+          }
+        } else if (typeof v === 'object') {
+          v = JSON.stringify(v);
+        }
+
+        if (v !== null) {
+          td.title = String(v);
+          td.textContent = String(v).length > 80 ? String(v).slice(0, 80) + '…' : String(v);
+        }
+      }
+
+      // Apply left-align to specific columns
+      if(['action_type', 'key_drivers', 'special_requirements'].includes(key)){
+        td.classList.add('left-align');
+      }
+
+      tr.appendChild(td);
+    }
+
+    tb.appendChild(tr);
+  }
+
+  // show/hide table (charts are updated separately from loadAllForCharts with all data)
+  const tableWrap = document.getElementById('tableWrap');
+  if(tableWrap) tableWrap.style.display = rows.length ? 'block' : 'none';
+
+  // Initialize ScrollBooster for smooth drag-to-scroll
+  if(rows.length && tableWrap && typeof ScrollBooster !== 'undefined'){
+    new ScrollBooster({
+      viewport: tableWrap,
+      content: tableWrap.querySelector('table'),
+      direction: 'all',  // Allow drag scrolling in all directions (horizontal + vertical)
+      scrollMode: 'native',
+      emulateScroll: true,
+      bounce: true,
+      friction: 0.05,
+      bounceForce: 0.1,
+    });
+
+    // Add Shift+Wheel horizontal scrolling for mouse users
+    tableWrap.addEventListener('wheel', (e) => {
+      if (e.shiftKey) {
+        e.preventDefault();
+        tableWrap.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+}
+
+/* ---------- Donuts (safe) ---------- */
+function dist(rows, attr){
+  if(attr==='language_count'){ let y=0,n=0; rows.forEach(r=> (+r.language_count||0)>=2? y++:n++ ); return {y,n}; }
+  if(attr==='action_type'){
+    let y=0,n=0;
+    rows.forEach(r=> {
+      const val = String(r.action_type||'').toLowerCase();
+      // Match "Signature Required" but NOT "No Signature"
+      (val.includes('signature') && !val.includes('no signature'))? y++:n++;
+    });
+    return {y,n};
+  }
+  let y=0,n=0; rows.forEach(r=> (r[attr]===true||String(r[attr]).toLowerCase()==='yes')? y++:n++ ); return {y,n};
+}
+function drawDonut(id,p){
+  const c=get(id); if(!c||!c.getContext) return;
+  const x=c.getContext('2d'), W=c.width, H=c.height, R=Math.min(W,H)/2-8, cx=W/2, cy=H/2, st=-Math.PI/2, a=p*2*Math.PI;
+  x.clearRect(0,0,W,H);
+  x.beginPath(); x.moveTo(cx,cy); x.fillStyle='#69758a'; x.arc(cx,cy,R,st+a,st+2*Math.PI); x.fill();
+  x.beginPath(); x.moveTo(cx,cy); x.fillStyle='#35c27e'; x.arc(cx,cy,R,st,st+a); x.fill();
+  x.globalCompositeOperation='destination-out'; x.beginPath(); x.arc(cx,cy,R*.6,0,Math.PI*2); x.fill(); x.globalCompositeOperation='source-over';
+}
+function setTxt(id,txt){ const el=get(id); if(el) el.textContent=txt; }
+function getDonutLabel(attr){
+  const labels = {
+    'action_type':'Action Type','attachments_required':'Attachments Required',
+    'notarization_required':'Notarization Required','conditional_logic':'Conditional Logic',
+    'deadlines_present':'Deadlines Present','third_party_involved':'Third Party Involved',
+    'same_domain':'Same Domain','witnesses_required':'Witnesses Required',
+    'identification_required':'ID Required','click_to_agree':'Click to Agree',
+    'language_count':'Language Count (Multi)','industry_vertical':'Industry Vertical',
+    'industry_subvertical':'Industry Sub-vertical'
+  };
+  return labels[attr] || attr.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function updateDonuts(rows){
+  const charts=get('charts');
+  console.log('[DONUTS] updateDonuts called with', rows?.length || 0, 'records');
+  console.log('[DONUTS] charts element:', charts);
+
+  if(!rows||!rows.length){
+    console.log('[DONUTS] No rows, hiding charts');
+    if(charts) charts.style.display='none';
+    return;
+  }
+
+  console.log('[DONUTS] Setting charts display to grid');
+  if(charts) charts.style.display='grid';
+
+  // Build donut parts from config (first 3 donuts, last one is payment total)
+  const parts = [
+    {attr:donutConfig.d1||'action_type', ttl:'d1Title', yes:'d1Yes', no:'d1No', canv:'d1'},
+    {attr:donutConfig.d2||'notarization_required', ttl:'d2Title', yes:'d2Yes', no:'d2No', canv:'d2'},
+    {attr:donutConfig.d3||'conditional_logic', ttl:'d3Title', yes:'d3Yes', no:'d3No', canv:'d3'}
+  ];
+
+  parts.forEach(p=>{
+    const d=dist(rows,p.attr), tot=(d.y+d.n)||1, y=Math.round(d.y*100/tot), n=100-y;
+    const label = getDonutLabel(p.attr);
+
+    setTxt(p.ttl, label);
+
+    // Update legend labels based on type
+    const yesEl = get(p.yes);
+    const noEl = get(p.no);
+    if(yesEl && noEl){
+      if(p.attr === 'action_type'){
+        yesEl.parentElement.innerHTML = `<span class="dot yes"></span><span>Signature — <strong id="${p.yes}">${y}%</strong></span>`;
+        noEl.parentElement.innerHTML = `<span class="dot no"></span><span>Other — <strong id="${p.no}">${n}%</strong></span>`;
+      } else if(p.attr === 'language_count'){
+        yesEl.parentElement.innerHTML = `<span class="dot yes"></span><span>Multi — <strong id="${p.yes}">${y}%</strong></span>`;
+        noEl.parentElement.innerHTML = `<span class="dot no"></span><span>Single — <strong id="${p.no}">${n}%</strong></span>`;
+      } else {
+        setTxt(p.yes, `${y}%`);
+        setTxt(p.no, `${n}%`);
+      }
+    }
+
+    drawDonut(p.canv,y/100);
+  });
+
+  // Handle d4 as payment total (not a donut)
+  let totalFees = 0;
+  let formsWithFees = 0;
+  rows.forEach(r => {
+    const amt = parseFloat(r.form_value || 0);
+    if(amt > 0){
+      totalFees += amt;
+      formsWithFees++;
+    }
+  });
+
+  const d4Amount = get('d4Amount');
+  const d4Count = get('d4Count');
+  if(d4Amount) d4Amount.textContent = '$' + totalFees.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if(d4Count) d4Count.textContent = `${formsWithFees} form${formsWithFees !== 1 ? 's' : ''} with fees`;
+}
+
+/* ---------- Bell Curves ---------- */
+function calculateDistribution(scores, binCount = 20) {
+  if (!scores || scores.length === 0) return {bins: [], max: 0};
+
+  const validScores = scores.filter(s => typeof s === 'number' && !isNaN(s) && s >= 0);
+  if (validScores.length === 0) return {bins: [], max: 0};
+
+  const min = Math.min(...validScores);
+  const max = Math.max(...validScores);
+  const binSize = (max - min) / binCount || 1;
+
+  const bins = Array(binCount).fill(0);
+  validScores.forEach(score => {
+    const binIndex = Math.min(Math.floor((score - min) / binSize), binCount - 1);
+    bins[binIndex]++;
+  });
+
+  return {bins, min, max, binSize, maxCount: Math.max(...bins)};
+}
+
+function drawBellCurve(canvasId, scores, color = '#76e0a6') {
+  const canvas = get(canvasId);
+  if (!canvas || !canvas.getContext) return;
+
+  const ctx = canvas.getContext('2d');
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  canvas.width = width;
+  canvas.height = height;
+
+  if (!scores || scores.length === 0) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#444';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', width / 2, height / 2);
+    return;
+  }
+
+  const dist = calculateDistribution(scores, 25);
+  if (dist.bins.length === 0) return;
+
+  const padding = {top: 20, right: 20, bottom: 40, left: 50};
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+
+  // Draw grid lines
+  ctx.strokeStyle = '#2a3a4a';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartHeight * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+  }
+
+  // Draw bell curve
+  const barWidth = chartWidth / dist.bins.length;
+  ctx.fillStyle = color + '40'; // Semi-transparent fill
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  dist.bins.forEach((count, i) => {
+    const x = padding.left + (i * barWidth);
+    const barHeight = dist.maxCount > 0 ? (count / dist.maxCount) * chartHeight : 0;
+    const y = padding.top + chartHeight - barHeight;
+
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+  ctx.lineTo(padding.left, padding.top + chartHeight);
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw line on top
+  ctx.beginPath();
+  dist.bins.forEach((count, i) => {
+    const x = padding.left + (i * barWidth);
+    const barHeight = dist.maxCount > 0 ? (count / dist.maxCount) * chartHeight : 0;
+    const y = padding.top + chartHeight - barHeight;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Draw axes
+  ctx.strokeStyle = '#a7b3ca';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top);
+  ctx.lineTo(padding.left, padding.top + chartHeight);
+  ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+  ctx.stroke();
+
+  // X-axis labels
+  ctx.fillStyle = '#a7b3ca';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  const labelCount = 5;
+  for (let i = 0; i <= labelCount; i++) {
+    const value = dist.min + (dist.max - dist.min) * (i / labelCount);
+    const x = padding.left + (chartWidth * i / labelCount);
+    ctx.fillText(Math.round(value), x, height - padding.bottom + 20);
+  }
+
+  // Y-axis label
+  ctx.save();
+  ctx.translate(15, padding.top + chartHeight / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Count', 0, 0);
+  ctx.restore();
+
+  // X-axis label
+  ctx.textAlign = 'center';
+  ctx.fillText('Complexity Score', padding.left + chartWidth / 2, height - 5);
+}
+
+function updateBellCurves(rows) {
+  const bellCurvesEl = get('bellCurves');
+  console.log('[BELL] updateBellCurves called with', rows?.length || 0, 'records');
+  console.log('[BELL] bellCurves element:', bellCurvesEl);
+
+  if (!rows || !rows.length) {
+    console.log('[BELL] No rows, hiding bell curves');
+    if (bellCurvesEl) bellCurvesEl.style.display = 'none';
+    return;
+  }
+
+  console.log('[BELL] Setting bell curves display to block');
+  if (bellCurvesEl) bellCurvesEl.style.display = 'block';
+
+  // Debug: Show sample of industry_vertical values
+  const verticalSample = rows.slice(0, 10).map(r => r.industry_vertical);
+  console.log('[BELL] Sample industry_vertical values:', verticalSample);
+
+  // Debug: Show full record structure for first 3 records
+  console.log('[BELL] Full sample records (first 3):', rows.slice(0, 3).map(r => ({
+    form_name: r.form_name,
+    industry_vertical: r.industry_vertical,
+    industry_subvertical: r.industry_subvertical,
+    entity_name: r.entity_name,
+    complexity_score: r.complexity_score
+  })));
+
+  const verticalCounts = {};
+  rows.forEach(r => {
+    const v = r.industry_vertical || 'null';
+    verticalCounts[v] = (verticalCounts[v] || 0) + 1;
+  });
+  console.log('[BELL] industry_vertical distribution:', verticalCounts);
+
+  // Calculate statistics helper
+  const calcStats = (scores) => {
+    if (!scores || scores.length === 0) return {count: 0, mean: 0, median: 0};
+    const sorted = scores.slice().sort((a, b) => a - b);
+    const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const median = sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+      : sorted[Math.floor(sorted.length / 2)];
+    return {count: scores.length, mean: Math.round(mean), median: Math.round(median)};
+  };
+
+  // All forms
+  const allScores = rows.map(r => r.complexity_score).filter(s => typeof s === 'number' && !isNaN(s));
+  const allStats = calcStats(allScores);
+  drawBellCurve('bellAll', allScores, '#76e0a6');
+  setTxt('bellAllCount', allStats.count);
+  setTxt('bellAllMean', allStats.mean);
+  setTxt('bellAllMedian', allStats.median);
+
+  // Financial Services (FINS)
+  const finsRows = rows.filter(r => {
+    const v = (r.industry_vertical || '').toLowerCase();
+    return v.includes('financial') || v.includes('banking') || v.includes('insurance');
+  });
+  console.log('[BELL] FINS: found', finsRows.length, 'matching records');
+  const finsScores = finsRows.map(r => r.complexity_score).filter(s => typeof s === 'number' && !isNaN(s));
+  console.log('[BELL] FINS: extracted', finsScores.length, 'valid complexity scores');
+  const finsStats = calcStats(finsScores);
+  drawBellCurve('bellFINS', finsScores, '#7dd3fc');
+  setTxt('bellFINSCount', finsStats.count);
+  setTxt('bellFINSMean', finsStats.mean);
+  setTxt('bellFINSMedian', finsStats.median);
+
+  // Healthcare & Life Sciences (HLS)
+  const hlsRows = rows.filter(r => {
+    const v = (r.industry_vertical || '').toLowerCase();
+    return v.includes('health') || v.includes('life sciences') || v.includes('pharma') || v.includes('medical');
+  });
+  console.log('[BELL] HLS: found', hlsRows.length, 'matching records');
+  const hlsScores = hlsRows.map(r => r.complexity_score).filter(s => typeof s === 'number' && !isNaN(s));
+  console.log('[BELL] HLS: extracted', hlsScores.length, 'valid complexity scores');
+  const hlsStats = calcStats(hlsScores);
+  drawBellCurve('bellHLS', hlsScores, '#a78bfa');
+  setTxt('bellHLSCount', hlsStats.count);
+  setTxt('bellHLSMean', hlsStats.mean);
+  setTxt('bellHLSMedian', hlsStats.median);
+
+  // Public Sector (PUBSEC)
+  const pubsecRows = rows.filter(r => {
+    const v = (r.industry_vertical || '').toLowerCase();
+    const e = (r.entity_name || '').toLowerCase();
+    return v.includes('public sector') || v.includes('government') || e.includes('.gov') || v.includes('federal') || v.includes('state');
+  });
+  const pubsecScores = pubsecRows.map(r => r.complexity_score).filter(s => typeof s === 'number' && !isNaN(s));
+  const pubsecStats = calcStats(pubsecScores);
+  drawBellCurve('bellPUBSEC', pubsecScores, '#ff6bc7');
+  setTxt('bellPUBSECCount', pubsecStats.count);
+  setTxt('bellPUBSECMean', pubsecStats.mean);
+  setTxt('bellPUBSECMedian', pubsecStats.median);
+}
+
+/* ---------- Export + Report ---------- */
+function toCsv(rows, headers){
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const lines=[ headers.map(k=>esc(COLS.find(c=>c.key===k)?.label||k)).join(',') ];
+  for(const r of rows){
+    lines.push(headers.map(k=>{
+      if(k==='source_url') return esc(r.source_url||'');
+      let v=k.split('.').reduce((o,kk)=>o&&o[kk], r); if(typeof v==='object') v=JSON.stringify(v);
+      return esc(v??'');
+    }).join(','));
+  }
+  return lines.join('\n');
+}
+function exportCsv(){ if(!rows.length) return; download('genetics.csv', toCsv(rows, colOrder), 'text/csv'); }
+function exportJson(){ if(!rows.length) return; download('genetics.json', JSON.stringify(rows,null,2), 'application/json'); }
+
+/* ---------- Pagination State ---------- */
+let currentPage = 1;
+let pageLimit = 100;
+let totalPages = 1;
+let totalRecords = 0;
+
+/* ---------- Load ALL committed records for charts ---------- */
+async function loadAllForCharts(){
+  try{
+    console.log('[CHARTS] Loading all committed records for charts...');
+    // Load all committed records without pagination for chart generation
+    const res = await getJSON(`/api/records?committed=1&page=1&limit=5000`);
+    console.log('[CHARTS] API response:', res);
+
+    if(res.records && Array.isArray(res.records)){
+      allRecordsForCharts = res.records;
+      console.log(`[CHARTS] Loaded ${allRecordsForCharts.length} total committed records for chart data`);
+
+      // Update charts with all data (even if empty, to show "No data" state)
+      try {
+        console.log('[CHARTS] About to call updateDonuts...');
+        updateDonuts(allRecordsForCharts);
+        console.log('[CHARTS] updateDonuts completed');
+      } catch(e) {
+        console.error('[CHARTS] updateDonuts error:', e);
+      }
+
+      try {
+        console.log('[CHARTS] About to call updateBellCurves...');
+        updateBellCurves(allRecordsForCharts);
+        console.log('[CHARTS] updateBellCurves completed');
+      } catch(e) {
+        console.error('[CHARTS] updateBellCurves error:', e);
+      }
+
+      if(allRecordsForCharts.length === 0){
+        console.log('[CHARTS] No committed records found - charts will show empty state');
+      }
+    } else {
+      console.error('[CHARTS] Invalid response format:', res);
+    }
+  }catch(e){
+    console.error('[CHARTS] Failed to load records:', e);
+    // Show empty charts on error
+    updateDonuts([]);
+    updateBellCurves([]);
+  }
+}
+
+/* ---------- Load committed (with pagination) ---------- */
+async function loadCommitted(page = 1){
+  try{
+    const res = await getJSON(`/api/records?committed=1&page=${page}&limit=${pageLimit}`);
+
+    // Handle new paginated response format
+    if(!res.records || !Array.isArray(res.records)){
+      const dbg=get('debug'); dbg.classList.remove('hidden');
+      dbg.textContent='No committed rows yet. Use Dashboard → Commit & View.';
+      return;
+    }
+
+    if(res.records.length === 0){
+      const dbg=get('debug'); dbg.classList.remove('hidden');
+      dbg.textContent='No committed rows yet. Use Dashboard → Commit & View.';
+      return;
+    }
+
+    // Update pagination state
+    currentPage = res.pagination.page;
+    totalPages = res.pagination.total_pages;
+    totalRecords = res.pagination.total;
+
+    // Default sort: First by Entity Name (asc), then by Complexity Score (asc)
+    const sorted = res.records.sort((a, b) => {
+      // Primary sort: Entity Name (alphabetical, case-insensitive)
+      const entityA = (a.entity_name || '').toLowerCase();
+      const entityB = (b.entity_name || '').toLowerCase();
+      if (entityA < entityB) return -1;
+      if (entityA > entityB) return 1;
+
+      // Secondary sort: Complexity Score (ascending - lowest first)
+      const scoreA = parseFloat(a.complexity_score) || 0;
+      const scoreB = parseFloat(b.complexity_score) || 0;
+      return scoreA - scoreB;
+    });
+
+    allRows = sorted; // Store sorted original data
+    buildHeader();
+    if (Object.keys(activeFilters).length > 0) {
+      applyFilters();
+    } else {
+      renderRows(sorted);
+      updateStats();
+    }
+
+    // Update pagination UI
+    updatePaginationControls();
+  }catch(e){
+    const dbg=get('debug'); dbg.classList.remove('hidden');
+    dbg.textContent='Failed to load: ' + (e?.message || String(e));
+  }
+}
+
+/* ---------- Admin Functions ---------- */
+async function postJSON(url, body){
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const text = await r.text();
+  let json = {};
+  try{ json = JSON.parse(text); }catch{}
+  if(!r.ok) throw new Error(json.error || json.msg || text || r.statusText);
+  return json;
+}
+
+function enableAdminMode(){
+  isAdminMode = true;
+  document.body.classList.add('admin-mode');
+  get('adminPin').style.display = 'none';
+  get('adminLoginBtn').style.display = 'none';
+  buildHeader();
+  renderRows(rows);
+}
+
+async function adminLogin(){
+  const pin = get('adminPin').value.trim();
+  if(!pin){
+    alert('Please enter Admin PIN');
+    return;
+  }
+
+  try{
+    // Test PIN with maintenance endpoint (doesn't require ids)
+    const res = await fetch('/api/maintenance/count_empty');
+    if(!res.ok){
+      throw new Error('Failed to connect to API');
+    }
+
+    // Test PIN by trying to delete with empty ids (will fail on missing ids but verify PIN)
+    const testRes = await fetch('/api/delete_records', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pin})
+    });
+
+    const data = await testRes.json();
+
+    // 403 = Invalid PIN, anything else means PIN is valid
+    if(testRes.status === 403 || data.msg === 'Invalid PIN'){
+      alert('Invalid PIN');
+      return;
+    }
+
+    adminPin = pin;
+    enableAdminMode();
+  }catch(e){
+    alert('Error: ' + e.message);
+  }
+}
+
+function editSelected(){
+  const ids = Array.from(selectedIds);
+  if(ids.length === 0){
+    alert('Please select at least one record');
+    return;
+  }
+  if(ids.length > 1){
+    alert('Please select only one record to edit');
+    return;
+  }
+
+  const record = allRows.find(r => r.id === ids[0]);
+  if(!record){
+    alert('Record not found');
+    return;
+  }
+
+  // Populate modal
+  get('editEntityName').value = record.entity_name || '';
+  get('editFormName').value = record.form_name || '';
+  get('editVertical').value = record.industry_vertical || '';
+  get('editSubvertical').value = record.industry_subvertical || '';
+
+  // Show modal
+  get('editModal').classList.add('show');
+}
+
+async function saveEdit(){
+  const ids = Array.from(selectedIds);
+  if(ids.length !== 1) return;
+
+  const updates = {
+    entity_name: get('editEntityName').value.trim(),
+    form_name: get('editFormName').value.trim(),
+    industry_vertical: get('editVertical').value.trim(),
+    industry_subvertical: get('editSubvertical').value.trim()
+  };
+
+  try{
+    const res = await postJSON('/api/update_record', {
+      pin: adminPin,
+      id: ids[0],
+      updates
+    });
+
+    if(res.ok){
+      alert('Record updated successfully');
+      get('editModal').classList.remove('show');
+      selectedIds.clear();
+      await loadCommitted();
+    }else{
+      alert('Update failed: ' + (res.msg || 'Unknown error'));
+    }
+  }catch(e){
+    alert('Error: ' + e.message);
+  }
+}
+
+function cancelEdit(){
+  get('editModal').classList.remove('show');
+}
+
+async function deleteSelected(){
+  const ids = Array.from(selectedIds);
+  if(ids.length === 0){
+    alert('Please select at least one record');
+    return;
+  }
+
+  if(!confirm(`Delete ${ids.length} record(s)?`)){
+    return;
+  }
+
+  try{
+    const res = await postJSON('/api/delete_records', {
+      pin: adminPin,
+      ids
+    });
+
+    if(res.ok){
+      alert(`Deleted ${res.deleted} record(s)`);
+      selectedIds.clear();
+      await loadCommitted();
+    }else{
+      alert('Delete failed: ' + (res.msg || 'Unknown error'));
+    }
+  }catch(e){
+    alert('Error: ' + e.message);
+  }
+}
+
+/* ---------- Boot ---------- */
+(async function(){
+  // Load prefs from API first
+  await loadPrefs();
+
+  buildHeader();
+  get('csvBtn').onclick=exportCsv;
+  get('jsonBtn').onclick=exportJson;
+  get('clearFiltersBtn').onclick=clearAllFilters;
+
+  // Pagination controls (both sets)
+  get('prevPageBtn').onclick=goToPreviousPage;
+  get('nextPageBtn').onclick=goToNextPage;
+  get('prevPageBtn2').onclick=goToPreviousPage;
+  get('nextPageBtn2').onclick=goToNextPage;
+
+  // Admin functionality
+  get('adminLoginBtn').onclick=adminLogin;
+  get('editSelectedBtn').onclick=editSelected;
+  get('deleteSelectedBtn').onclick=deleteSelected;
+  get('saveEditBtn').onclick=saveEdit;
+  get('cancelEditBtn').onclick=cancelEdit;
+
+  // Show admin PIN input on Ctrl+Shift+A or Cmd+Shift+A
+  document.addEventListener('keydown', (e) => {
+    if((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A'){
+      e.preventDefault();
+      const pinInput = get('adminPin');
+      const loginBtn = get('adminLoginBtn');
+      pinInput.style.display = 'inline-block';
+      loginBtn.style.display = 'inline-block';
+      pinInput.focus();
+    }
+  });
+
+  // Enter key on PIN input
+  get('adminPin').addEventListener('keypress', (e) => {
+    if(e.key === 'Enter'){
+      adminLogin();
+    }
+  });
+
+  // Close filter dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.filter-icon') && !e.target.closest('.filter-dropdown')) {
+      document.querySelectorAll('.filter-dropdown.show').forEach(d => d.classList.remove('show'));
+    }
+  });
+
+  // Close modal on overlay click
+  get('editModal').addEventListener('click', (e) => {
+    if(e.target === get('editModal')){
+      cancelEdit();
+    }
+  });
+
+  // Load all records for charts (not paginated), then load first page for table
+  await loadAllForCharts();
+  await loadCommitted();
+})();
+</script>
+
+<footer>
+  <a href="https://www.meyerinterests.com/" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-bottom:8px">
+    <img src="/ui/meyerlogowhite.png" alt="Meyer Interests" style="height:50px;opacity:0.7;transition:opacity 0.2s;image-rendering:-webkit-optimize-contrast;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+  </a>
+  <div>&copy; Meyer Interests, LLC 2025</div>
+</footer>
+
+</body>
+</html>

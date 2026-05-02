@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Horizontal Scroll Demo</title>
+  <style>
+    :root {
+      --bg: #06080e;
+      --panel: #0f1623;
+      --card: #1f2f46;
+      --hair: #243147;
+      --ink: #e8eef6;
+      --accent: #76e0a6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      margin: 0;
+    }
+
+    h1 {
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .instructions {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      border: 1px solid var(--hair);
+    }
+
+    .instructions h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+
+    .instructions li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    /* Enhanced table wrapper with scroll shadows */
+    .table-wrap {
+      max-height: 600px;
+      overflow: auto;
+      border: 1px solid var(--hair);
+      border-radius: 14px;
+      cursor: grab;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+
+      /* Scroll shadow gradients - shows shadows at edges when there's more content */
+      background:
+        /* Left shadow */
+        linear-gradient(90deg, var(--panel) 30%, rgba(15, 22, 35, 0)) left,
+        /* Right shadow */
+        linear-gradient(90deg, rgba(15, 22, 35, 0), var(--panel) 70%) right,
+        /* Left cover (hides shadow when scrolled all the way left) */
+        radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.5), transparent) left,
+        /* Right cover (hides shadow when scrolled all the way right) */
+        radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.5), transparent) right;
+
+      background-repeat: no-repeat;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    .table-wrap:active {
+      cursor: grabbing;
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: auto;
+      min-width: 2000px; /* Wider than screen to force horizontal scrolling */
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--hair);
+      border-right: 1px solid var(--hair);
+      background: var(--panel);
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    th {
+      background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+
+    /* First column sticky (like your current implementation) */
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: var(--card);
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+      font-weight: 500;
+    }
+
+    th:first-child {
+      z-index: 20;
+    }
+
+    tbody tr:hover {
+      background: var(--card);
+    }
+
+    tbody tr:hover td:first-child {
+      background: var(--card);
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .chip.yes {
+      background: #0f2419;
+      color: var(--accent);
+      border: 1px solid #1d5a33;
+    }
+
+    .chip.no {
+      background: var(--panel);
+      color: #a7b3ca;
+      border: 1px solid var(--hair);
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--hair);
+      font-family: monospace;
+      font-size: 12px;
+      color: #a7b3ca;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Horizontal Scroll Enhancement Demo</h1>
+
+  <div class="instructions">
+    <h3>Try These:</h3>
+    <ol>
+      <li><strong>Scroll shadows:</strong> Notice the shadows at left/right edges showing more content</li>
+      <li><strong>Click and drag:</strong> Click anywhere in the table and drag left/right (like mobile!)</li>
+      <li><strong>Mouse wheel:</strong> Still works normally</li>
+      <li><strong>Momentum:</strong> Drag quickly and release - it keeps scrolling smoothly</li>
+      <li><strong>Sticky column:</strong> First column stays fixed while scrolling horizontally</li>
+    </ol>
+  </div>
+
+  <div class="table-wrap" id="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 300px;">Form Name</th>
+          <th style="width: 200px;">Entity Name</th>
+          <th style="width: 100px;">Pages</th>
+          <th style="width: 100px;">Fields</th>
+          <th style="width: 120px;">Complexity</th>
+          <th style="width: 150px;">Signatures</th>
+          <th style="width: 180px;">Action Type</th>
+          <th style="width: 150px;">Industry</th>
+          <th style="width: 100px;">Language</th>
+          <th style="width: 200px;">Root Domain</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Employee's Withholding Certificate (Form W-4)</td>
+          <td>Internal Revenue Service</td>
+          <td>4</td>
+          <td>12</td>
+          <td>45.2</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Finance</td>
+          <td>EN</td>
+          <td>irs.gov</td>
+        </tr>
+        <tr>
+          <td>Medicare Enrollment Application (CMS-40B)</td>
+          <td>Centers for Medicare & Medicaid Services</td>
+          <td>8</td>
+          <td>34</td>
+          <td>67.8</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Healthcare</td>
+          <td>EN</td>
+          <td>medicare.gov</td>
+        </tr>
+        <tr>
+          <td>Application for Health Coverage & Help Paying Costs</td>
+          <td>HealthCare.gov</td>
+          <td>12</td>
+          <td>56</td>
+          <td>82.4</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Healthcare</td>
+          <td>EN</td>
+          <td>healthcare.gov</td>
+        </tr>
+        <tr>
+          <td>Free Application for Federal Student Aid (FAFSA)</td>
+          <td>U.S. Department of Education</td>
+          <td>10</td>
+          <td>48</td>
+          <td>78.9</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Education</td>
+          <td>EN</td>
+          <td>studentaid.gov</td>
+        </tr>
+        <tr>
+          <td>Social Security Retirement Benefits Application</td>
+          <td>Social Security Administration</td>
+          <td>6</td>
+          <td>28</td>
+          <td>58.3</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Government</td>
+          <td>EN</td>
+          <td>ssa.gov</td>
+        </tr>
+        <tr>
+          <td>Uniform Residential Loan Application (Form 1003)</td>
+          <td>Fannie Mae / Freddie Mac</td>
+          <td>15</td>
+          <td>87</td>
+          <td>92.1</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Finance</td>
+          <td>EN</td>
+          <td>fanniemae.com</td>
+        </tr>
+        <tr>
+          <td>Health Insurance Marketplace Exemption Application</td>
+          <td>HealthCare.gov</td>
+          <td>5</td>
+          <td>19</td>
+          <td>42.7</td>
+          <td><span class="chip no">No</span></td>
+          <td>Information Collection</td>
+          <td>Healthcare</td>
+          <td>EN</td>
+          <td>healthcare.gov</td>
+        </tr>
+        <tr>
+          <td>Notice of Privacy Practices (HIPAA)</td>
+          <td>Various Healthcare Providers</td>
+          <td>3</td>
+          <td>0</td>
+          <td>12.4</td>
+          <td><span class="chip no">No</span></td>
+          <td>Disclosure</td>
+          <td>Healthcare</td>
+          <td>EN</td>
+          <td>hhs.gov</td>
+        </tr>
+        <tr>
+          <td>VA Form 21-526EZ - Application for Disability Compensation</td>
+          <td>U.S. Department of Veterans Affairs</td>
+          <td>22</td>
+          <td>134</td>
+          <td>98.7</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Government</td>
+          <td>EN</td>
+          <td>va.gov</td>
+        </tr>
+        <tr>
+          <td>TSA PreCheck Application</td>
+          <td>Transportation Security Administration</td>
+          <td>2</td>
+          <td>14</td>
+          <td>38.2</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Government</td>
+          <td>EN</td>
+          <td>tsa.gov</td>
+        </tr>
+        <tr>
+          <td>Account Opening Agreement</td>
+          <td>Chase Bank</td>
+          <td>7</td>
+          <td>23</td>
+          <td>51.6</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Finance</td>
+          <td>EN</td>
+          <td>chase.com</td>
+        </tr>
+        <tr>
+          <td>Credit Card Application</td>
+          <td>American Express</td>
+          <td>4</td>
+          <td>18</td>
+          <td>44.9</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Finance</td>
+          <td>EN</td>
+          <td>americanexpress.com</td>
+        </tr>
+        <tr>
+          <td>Auto Loan Application</td>
+          <td>Wells Fargo</td>
+          <td>5</td>
+          <td>32</td>
+          <td>59.3</td>
+          <td><span class="chip yes">Yes</span></td>
+          <td>Signature Required</td>
+          <td>Finance</td>
+          <td>EN</td>
+          <td>wellsfargo.com</td>
+        </tr>
+        <tr>
+          <td>Privacy Policy</td>
+          <td>Various Companies</td>
+          <td>8</td>
+          <td>0</td>
+          <td>8.2</td>
+          <td><span class="chip no">No</span></td>
+          <td>Disclosure</td>
+          <td>Technology</td>
+          <td>EN</td>
+          <td>various</td>
+        </tr>
+        <tr>
+          <td>Terms of Service Agreement</td>
+          <td>Various Companies</td>
+          <td>12</td>
+          <td>0</td>
+          <td>6.8</td>
+          <td><span class="chip no">No</span></td>
+          <td>Disclosure</td>
+          <td>Technology</td>
+          <td>EN</td>
+          <td>various</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="status" id="status">
+    Status: Scroll horizontally to see the shadows at the edges!
+  </div>
+
+  <!-- ScrollBooster for smooth drag-to-scroll with momentum -->
+  <script src="https://unpkg.com/scrollbooster@3/dist/scrollbooster.min.js"></script>
+  <script>
+    const tableWrap = document.getElementById('tableWrap');
+    const status = document.getElementById('status');
+
+    // Initialize ScrollBooster for drag-to-scroll
+    new ScrollBooster({
+      viewport: tableWrap,
+      content: tableWrap.querySelector('table'),
+      direction: 'horizontal',  // Only horizontal scrolling
+      scrollMode: 'native',     // Use native scroll, not transform
+      emulateScroll: true,      // Works with mouse wheel too
+      bounce: true,             // Rubber-band effect at edges (like iOS)
+      friction: 0.05,           // Smooth momentum (lower = more momentum)
+      bounceForce: 0.1,         // Bounce intensity
+    });
+
+    // Update status on scroll
+    tableWrap.addEventListener('scroll', () => {
+      const scrollLeft = tableWrap.scrollLeft;
+      const maxScroll = tableWrap.scrollWidth - tableWrap.clientWidth;
+      const scrollPercent = Math.round((scrollLeft / maxScroll) * 100);
+
+      status.textContent = `Status: Scrolled ${scrollPercent}% horizontally (${Math.round(scrollLeft)}px / ${Math.round(maxScroll)}px)`;
+    });
+  </script>
+</body>
+</html>

@@ -27,6 +27,7 @@ data/formgenome.db
 
 # Backups / broken / archive blobs (must NEVER ship in image)
 *.bak
+*.backup
 *.broken
 Archive.zip
 

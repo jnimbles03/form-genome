@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Genome Project — Methodology</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#06080e; --ink:#e8eef6; --muted:#a7b3ca; --hair:#243147; --card:#1f2f46; --panel:#0f1623; --accent:#76e0a6;
+            --radius:14px; --radius-lg:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body {
+            font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* Orbs (background) */
+        #orbsCanvas{position:fixed; inset:0; z-index:0; pointer-events:none; filter:none; opacity:.75}
+
+        header {
+            position: relative;
+            z-index: 1;
+            padding: 26px 20px 20px;
+            text-align: center;
+        }
+        h1 {
+            margin: 0 0 10px;
+            font-size: 32px;
+            font-weight: 500;
+            color: var(--accent);
+            font-family: 'Orbitron', system-ui, sans-serif;
+            letter-spacing: .5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,.4), 0 4px 8px rgba(0,0,0,.2);
+        }
+        p.subtitle {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h2 {
+            margin-top: 40px;
+            font-size: 24px;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 10px;
+            color: var(--accent);
+            font-family: 'Orbitron', system-ui, sans-serif;
+            font-weight: 500;
+        }
+        h3 {
+            color: var(--ink);
+            font-weight: 600;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(240px,1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--hair);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .card p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .card strong {
+            color: var(--ink);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: var(--card);
+            border: 1px solid var(--hair);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--hair);
+            font-size: 14px;
+        }
+        th {
+            background: var(--panel);
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Orbitron', system-ui, sans-serif;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        caption {
+            caption-side: top;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--ink);
+            font-size: 15px;
+        }
+        .footnote {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 16px;
+            line-height: 1.5;
+        }
+
+        /* Details/Summary */
+        details {
+            margin-top: 12px;
+        }
+        summary {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+        summary:hover {
+            color: #85e9b1;
+        }
+
+        /* Links */
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Horizontal separators */
+        hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--hair) 20%, var(--hair) 80%, transparent);
+            margin: 48px 0;
+            opacity: 0.6;
+        }
+
+        /* Footer */
+        footer {
+            position: relative;
+            z-index: 1;
+            text-align: right;
+            padding: 20px 30px 20px 20px;
+            color: var(--muted);
+            font-size: 10px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="orbsCanvas"></canvas>
+    <header>
+        <h1>Scoring Methodology</h1>
+        <p class="subtitle">Operational complexity vs. rejection risk</p>
+    </header>
+    <div class="container">
+        <h2>Two Orthogonal Metrics</h2>
+        <ul>
+            <li><strong>Complexity Score</strong>: Operational difficulty (human coordination, process overhead, cognitive load)</li>
+            <li><strong>NIGO Risk Score</strong>: Rejection probability (validation gaps, compliance failures)</li>
+        </ul>
+
+        <hr>
+
+        <h2>Complexity Score Methodology</h2>
+        <table>
+            <caption>Complexity Score Factors (Weighted by Impact)</caption>
+            <thead>
+                <tr><th>Difficulty Tier</th><th>Factors Evaluated</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong style="color:#ff6b6b">TIER 1: Human Coordination</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Highest weight - hardest to automate)</span></td><td>Notarization requirements, Third-party involvement (Physician, Attorney, etc.), Witness signatures</td></tr>
+
+                <tr><td><strong style="color:#ffa94d">TIER 2: Process Complexity</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(High weight)</span></td><td>Conditional logic / JavaScript, Attachments required, ID verification, Data validation fields (SSN, TIN, Account #, etc.), Form dependencies, Deadlines</td></tr>
+
+                <tr><td><strong style="color:#74c0fc">TIER 3: Data Entry Options</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Medium weight)</span></td><td>Radio groups, Picklists, Dropdown menus</td></tr>
+
+                <tr><td><strong style="color:#b197fc">TIER 4: Volume Indicators</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Lower weight)</span></td><td>Page count, Field count</td></tr>
+
+                <tr><td><strong style="color:var(--accent)">Additional Factors</strong></td><td>Multiple signer roles, PII sensitivity, Visual complexity (drawings, images), XFA forms (dynamic structure)</td></tr>
+            </tbody>
+        </table>
+
+        <p class="footnote" style="margin-top:20px; max-width:800px">
+            <strong>Note:</strong> Each factor is assigned a proprietary weight based on real-world operational impact. Higher-tier factors receive exponentially greater weight to reflect their disproportionate impact on processing time, error rates, and human coordination requirements.
+        </p>
+
+        <h3 style="margin-top:24px; font-size:18px">Score Ranges</h3>
+        <table style="margin-top:12px; max-width:500px">
+            <thead>
+                <tr><th>Range</th><th>Classification</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>0–25</td><td><strong>Low</strong></td></tr>
+                <tr><td>26–50</td><td><strong>Medium</strong></td></tr>
+                <tr><td>51–75</td><td><strong>High</strong></td></tr>
+                <tr><td>76+</td><td><strong>Very High</strong></td></tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>NIGO Risk Score Methodology</h2>
+        <table>
+            <caption>NIGO Risk Score Factors (Weighted by Rejection Probability)</caption>
+            <thead>
+                <tr><th>Risk Tier</th><th>Factors Evaluated</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong style="color:#ff6b6b">HIGH RISK</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Frequent rejection causes - highest weight)</span></td><td>Data validation fields (SSN, TIN, ZIP, Account #, etc.), Attachments required, Notarization required, ID verification, Deadlines</td></tr>
+
+                <tr><td><strong style="color:#ffa94d">MEDIUM RISK</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Moderate weight)</span></td><td>Conditional logic / JavaScript, Dependencies on other forms, Witness signatures, Third-party coordination (Physician, Attorney, etc.)</td></tr>
+
+                <tr><td><strong style="color:#74c0fc">LOW RISK</strong><br/><span style="font-size:11px;font-weight:normal;color:var(--muted)">(Correlations, not direct causes - lower weight)</span></td><td>Multiple signers, Radio groups / picklists, Page count, Field count</td></tr>
+            </tbody>
+        </table>
+
+        <p class="footnote" style="margin-top:20px; max-width:800px">
+            <strong>Note:</strong> NIGO (Not In Good Order) factors are weighted based on historical rejection rates and validation failure patterns. The scoring algorithm assigns higher weights to factors that directly cause form rejection, while volume indicators receive minimal weight as they correlate with, but do not directly cause, processing failures.
+        </p>
+
+        <h3 style="margin-top:24px; font-size:18px">Score Ranges</h3>
+        <table style="margin-top:12px; max-width:500px">
+            <thead>
+                <tr><th>Range</th><th>Classification</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>0–25</td><td><strong>Low</strong></td></tr>
+                <tr><td>26–50</td><td><strong>Medium</strong></td></tr>
+                <tr><td>51–75</td><td><strong>High</strong></td></tr>
+                <tr><td>76+</td><td><strong>Very High</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        &copy; Meyer Interests, LLC 2025
+    </footer>
+
+    <script>
+    /* ---------- Orbs ---------- */
+    (function(){
+      const c=document.getElementById('orbsCanvas'), ctx=c.getContext('2d');
+      let W=0,H=0,orbs=[]; const rnd=(a,b)=>a+Math.random()*(b-a);
+      function R(){W=c.width=innerWidth;H=c.height=innerHeight;}
+      function make(){ orbs=Array.from({length:28},()=>({x:rnd(0,W),y:rnd(0,H),r:rnd(28,110),dx:rnd(-.1,.1),dy:rnd(-.07,.07),h:rnd(188,205),a:rnd(.35,.55)})); }
+      function tick(){ ctx.clearRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
+        for(const o of orbs){ o.x+=o.dx; o.y+=o.dy; if(o.x<-o.r)o.x=W+o.r; if(o.x>W+o.r)o.x=-o.r; if(o.y<-o.r)o.y=H+o.r; if(o.y>H+o.r)o.y=-o.r;
+          const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r); g.addColorStop(0,`hsla(${o.h},90%,62%,${o.a})`); g.addColorStop(1,`hsla(${o.h},90%,62%,0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
+        } ctx.globalCompositeOperation='source-over'; requestAnimationFrame(tick); }
+      addEventListener('resize',R,{passive:true}); R(); make(); tick();
+    })();
+    </script>
+</body>
+</html>
