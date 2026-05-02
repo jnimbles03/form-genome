@@ -1,6 +1,7 @@
 # app/services/crawler.py
 from __future__ import annotations
 
+import logging
 import os
 import re
 import time
@@ -22,6 +23,14 @@ except Exception:
 
 # LLM-first discovery helper (uses llm_router under the hood via llm_discover)
 from app.services import llm_discover, adaptive_depth, progress
+from app.services import politeness
+
+logger = logging.getLogger(__name__)
+
+# Module-level politeness singletons (Wave 1.5, F-CS-10).
+# Process-local; cluster-wide coordination is Wave 3 backlog.
+_ROBOTS = politeness.default_robots_cache()
+_HOST_LIMITER = politeness.default_host_limiter()
 
 # Hybrid search configuration: maximum number of directories to crawl and overall timeout (seconds)
 HYBRID_MAX_ITER = int(os.getenv('HYBRID_MAX_ITER', '20'))  # default max directories
@@ -39,19 +48,17 @@ except Exception:
 # HTTP client
 # ------------------------------------------------------------------------------------
 
+# F-CS-10: One canonical, honest User-Agent for every outbound request.
+# Identifies the bot, points to source, names a contact. Replaces the
+# Chrome-impersonation strings and per-vendor header shims that used to
+# live here.
 HEADERS_PDF = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 FormGenomeCrawler/1.9"
-    ),
+    "User-Agent": politeness.USER_AGENT,
     "Accept": "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
     "Connection": "close",
 }
 BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": politeness.USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Upgrade-Insecure-Requests": "1",
@@ -63,6 +70,9 @@ BROWSER_HEADERS = {
 
 def _session() -> requests.Session:
     s = requests.Session()
+    # Apply the honest UA on the session so every request carries it,
+    # even paths that don't pass headers= explicitly.
+    s.headers.update({"User-Agent": politeness.USER_AGENT})
     # F-CS-10: include 429 in the retry list, bump backoff_factor so
     # successive retries actually wait, and respect Retry-After headers
     # explicitly (default in newer urllib3, but be explicit in case the
@@ -82,14 +92,6 @@ def _session() -> requests.Session:
 def _verify_path() -> str:
     # Allow corp CA trust store
     return os.getenv("REQUESTS_CA_BUNDLE") or os.getenv("SSL_CERT_FILE") or requests.certs.where()
-
-def _shim_headers_for(url: str, hdrs: dict) -> dict:
-    """Per-domain header tweaks (Akamai/CF guarded sites)."""
-    h = dict(hdrs)
-    host = (up.urlsplit(url).hostname or "").lower()
-    if "schwab.com" in host:
-        h.setdefault("Referer", "https://www.schwab.com/forms-and-applications")
-    return h
 
 
 # ------------------------------------------------------------------------------------
@@ -1000,13 +1002,48 @@ def crawl(url: str,
             if d > depth:
                 q_pages.task_done(); continue
 
-            # Fetch HTML page quickly
+            # F-CS-10: robots.txt check (open-by-default if no robots).
             try:
-                r = local_sess.get(page_url, timeout=(connect_timeout, timeout),
-                                   headers=_shim_headers_for(page_url, BROWSER_HEADERS),
-                                   verify=_verify_path(), allow_redirects=True)
+                if not _ROBOTS.is_allowed(page_url):
+                    logger.warning(
+                        "robots.txt disallows %s — skipping (no content recorded)",
+                        page_url,
+                    )
+                    if progress_cb:
+                        try: progress_cb(event="page", url=page_url, done=len(visited),
+                                         queue=q_pages.qsize(), pdfs=len(pdfs))
+                        except Exception: pass
+                    q_pages.task_done(); continue
+            except Exception as _robots_err:
+                # Defensive: any error in robots layer must not break crawl.
+                logger.debug("robots check raised for %s: %s", page_url, _robots_err)
+
+            # Fetch HTML page quickly, gated by per-host rate limiter (F-CS-10).
+            try:
+                with _HOST_LIMITER.acquire(page_url):
+                    r = local_sess.get(page_url, timeout=(connect_timeout, timeout),
+                                       headers=BROWSER_HEADERS,
+                                       verify=_verify_path(), allow_redirects=True)
                 status = getattr(r, "status_code", 200)
-                if status in (401, 403, 429):
+                if status == 429:
+                    # Back-pressure, not a worker error. Honor Retry-After
+                    # so the next acquire on this host waits.
+                    retry_after = politeness.parse_retry_after(
+                        r.headers.get("Retry-After") if hasattr(r, "headers") else None
+                    )
+                    host = (up.urlsplit(page_url).netloc or "").lower()
+                    if retry_after is not None:
+                        _HOST_LIMITER.set_retry_after(host, retry_after)
+                    else:
+                        # Default modest backoff if server didn't say.
+                        _HOST_LIMITER.set_retry_after(host, 30.0)
+                    logger.info(
+                        "429 from %s; backing off %.1fs (Retry-After=%r)",
+                        host, retry_after if retry_after is not None else 30.0,
+                        r.headers.get("Retry-After") if hasattr(r, "headers") else None,
+                    )
+                    q_pages.task_done(); continue
+                if status in (401, 403):
                     reason = reason or "blocked"
                     q_pages.task_done(); continue
                 ct = (r.headers.get("Content-Type") or "").lower()
@@ -1103,11 +1140,17 @@ def crawl(url: str,
     used_playwright = False
     if (not pdfs) and _HAS_PLAYWRIGHT and strategy != "playwright":
         # Check if we might have JavaScript-rendered content
-        # Get seed page HTML to check for JS frameworks
+        # Get seed page HTML to check for JS frameworks (F-CS-05: walk
+        # redirects manually with SSRF re-check at every hop).
         try:
             s = _session()
-            r = s.get(seed, timeout=(connect_timeout, timeout),
-                     headers=BROWSER_HEADERS, verify=_verify_path(), allow_redirects=True)
+            r = politeness.safe_redirect_walk(
+                seed, s,
+                timeout=(connect_timeout, timeout),
+                headers=BROWSER_HEADERS,
+                verify=_verify_path(),
+                ssrf_check=politeness.is_safe_crawl_target,
+            )
             seed_html = r.text or ""
             all_hrefs, _ = _extract_links_html(seed_html, seed)
             link_count = len(all_hrefs)
@@ -1510,11 +1553,17 @@ def crawl_auto(url: str,
     # Handles sites like Adobe Experience Manager, React, Vue, Angular
     if found == 0 and reason not in ("user_stopped", "deadline"):
         if _HAS_PLAYWRIGHT:
-            # Check if this might be a JS-rendered site
+            # Check if this might be a JS-rendered site (F-CS-05: walk
+            # redirects manually with SSRF re-check at every hop).
             try:
                 s = _session()
-                r = s.get(seed, timeout=(5.0, 8.0), headers=BROWSER_HEADERS,
-                         verify=_verify_path(), allow_redirects=True)
+                r = politeness.safe_redirect_walk(
+                    seed, s,
+                    timeout=(5.0, 8.0),
+                    headers=BROWSER_HEADERS,
+                    verify=_verify_path(),
+                    ssrf_check=politeness.is_safe_crawl_target,
+                )
                 html = r.text or ""
                 hrefs, _ = _extract_links_html(html, seed)
 

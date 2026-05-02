@@ -61,11 +61,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import certifi
 
+# F-CS-10: honest UA, single source of truth in app.services.politeness.
+from app.services import politeness
+
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 FormGenome/1.7"
-    ),
+    "User-Agent": politeness.USER_AGENT,
     "Accept": "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
     "Connection": "close",
 }
@@ -124,13 +124,11 @@ def _safe_get(url: str, timeout: int = 25, max_mb: int = 120) -> bytes:
     s = _requests_session()
     verify = os.getenv("REQUESTS_CA_BUNDLE") or os.getenv("SSL_CERT_FILE") or certifi.where()
 
-    # Heuristic referer for guarded domains
+    # F-CS-10: removed per-vendor Referer shims (Schwab, TSP). Honest
+    # UA + politeness layer should pass the same WAFs; if a specific
+    # site blocks us, escalate case-by-case rather than re-introducing
+    # impersonation defaults.
     headers = dict(HEADERS)
-    host = urlparse(url).netloc.lower()
-    if "tsp.gov" in host:
-        headers["Referer"] = "https://www.tsp.gov/"
-    if "schwab.com" in host:
-        headers["Referer"] = "https://www.schwab.com/forms-and-applications"
 
     # 1) HEAD (best effort) to detect 4xx and huge files fast
     try:
