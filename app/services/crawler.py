@@ -63,11 +63,16 @@ BROWSER_HEADERS = {
 
 def _session() -> requests.Session:
     s = requests.Session()
+    # F-CS-10: include 429 in the retry list, bump backoff_factor so
+    # successive retries actually wait, and respect Retry-After headers
+    # explicitly (default in newer urllib3, but be explicit in case the
+    # deployed version is older).
     retry = Retry(
         total=2,
-        backoff_factor=0.3,
-        status_forcelist=(500, 502, 503, 504),
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
         allowed_methods=("HEAD", "GET", "OPTIONS"),
+        respect_retry_after_header=True,
         raise_on_status=False,
     )
     s.mount("https://", HTTPAdapter(max_retries=retry))
@@ -1376,7 +1381,12 @@ def crawl_parallel(url: str,
     cse_thread.join(timeout=deadline_sec)
     crawler_thread.join(timeout=deadline_sec)
 
-    # Merge results - prefer crawler URLs (validated) but use CSE as backup
+    # Merge results - prefer crawler URLs (validated) but use CSE as backup.
+    # F-CS-14: build the entire response dict inside the lock so
+    # `final_urls` cannot be mutated by a still-running worker thread
+    # (which can happen when crawler_thread.join(timeout=...) returns
+    # before the worker exits). Previously len(final_urls) was read
+    # outside the lock, which produced flaky counts under load.
     with lock:
         crawler_urls = set(crawler_results["urls"])
         cse_urls = set(cse_results["urls"])
@@ -1408,19 +1418,22 @@ def crawl_parallel(url: str,
         if both > 0:
             print(f"[parallel] Found {both} forms in both, {crawler_only} crawler-only, {cse_only} CSE-only", flush=True)
 
-    elapsed_ms = int((time.time() - started) * 1000)
+        elapsed_ms = int((time.time() - started) * 1000)
+        found_count = len(final_urls)
+        # Snapshot the response payload while the lock is still held.
+        result_payload = {
+            "found": found_count,
+            "urls": list(final_urls),
+            "source": source,
+            "ms": elapsed_ms,
+            "reason": reason,
+        }
 
     if progress_cb:
-        try: progress_cb(event="finish", found=len(final_urls))
+        try: progress_cb(event="finish", found=found_count)
         except Exception: pass
 
-    return {
-        "found": len(final_urls),
-        "urls": final_urls,
-        "source": source,
-        "ms": elapsed_ms,
-        "reason": reason,
-    }
+    return result_payload
 
 
 def crawl_auto(url: str,
