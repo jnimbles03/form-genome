@@ -47,11 +47,17 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Build & push image
-        # gcloud builds submit accepts only one --tag; we tag with the
-        # commit SHA, then add :latest as a separate, lightweight tag op.
-        # The trailing "." tells Cloud Build to use the checked-out source.
+        # `--region=$REGION` runs a regional Cloud Build, which writes logs
+        # to a regional bucket the deployer SA can access. Without it,
+        # global Cloud Build streams logs from a project-default bucket
+        # that requires project-Viewer on the caller — least-privilege SAs
+        # error after ~2 min with "This tool can only stream logs if you
+        # are Viewer/Owner of the project".
+        # `gcloud builds submit` accepts only one --tag, so we tag with the
+        # commit SHA here and add :latest separately.
         run: |
           gcloud builds submit . \
+            --region="$REGION" \
             --tag "$IMAGE:${GITHUB_SHA}" \
             --machine-type=e2-highcpu-8 \
             --project="$PROJECT_ID"
