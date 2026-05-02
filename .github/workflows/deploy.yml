@@ -1,0 +1,87 @@
+name: Deploy to Cloud Run
+
+# Manual-only until Workload Identity Federation is configured (see
+# GITHUB_ACTIONS_SETUP.md). After WIF is verified working with one
+# successful manual run, uncomment the `push` trigger below to auto-deploy
+# on merges to main.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you deploying? (shows up in run history)'
+        required: false
+        default: 'manual deploy'
+  # push:
+  #   branches: [main]
+
+env:
+  PROJECT_ID: formgenome
+  REGION: us-central1
+  SERVICE: form-genome
+  IMAGE: gcr.io/formgenome/form-genome
+
+permissions:
+  contents: read
+  id-token: write   # required for Workload Identity Federation
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Build & push image
+        run: |
+          gcloud auth configure-docker --quiet
+          gcloud builds submit \
+            --tag "$IMAGE:${GITHUB_SHA}" \
+            --tag "$IMAGE:latest" \
+            --machine-type=e2-highcpu-8 \
+            --project="$PROJECT_ID"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE:${GITHUB_SHA}" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --platform managed \
+            --memory 2Gi \
+            --cpu 2 \
+            --timeout 300 \
+            --max-instances 10 \
+            --no-allow-unauthenticated \
+            --set-env-vars "CLOUD_SQL_CONNECTION_NAME=formgenome:us-central1:formgenome-db,DB_NAME=postgres,DB_USER=postgres,FLASK_ENV=production" \
+            --set-secrets "DB_PASSWORD=formgenome-db-password:latest,ADMIN_PIN=admin-pin:latest,SECRET_KEY=flask-secret-key:latest,OPENAI_API_KEY=openai-api-key:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest,GOOGLE_CLIENT_ID=google-oauth-client-id:latest,GOOGLE_CLIENT_SECRET=google-oauth-client-secret:latest" \
+            --add-cloudsql-instances formgenome:us-central1:formgenome-db
+
+      - name: Smoke check (revision health)
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" \
+            --region "$REGION" --project "$PROJECT_ID" \
+            --format='value(status.url)')
+          echo "Service URL: $URL"
+          # Cloud Run is now IAM-gated; expect 403 from anonymous, which
+          # is what we want. A non-403, non-200, non-302 is a deploy issue.
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL")
+          echo "Anonymous probe returned: $CODE"
+          if [ "$CODE" != "403" ] && [ "$CODE" != "401" ] && [ "$CODE" != "302" ] && [ "$CODE" != "200" ]; then
+            echo "::error::Unexpected status code from Cloud Run: $CODE"
+            exit 1
+          fi
