@@ -1,9 +1,8 @@
 name: Deploy to Cloud Run
 
-# Manual-only until Workload Identity Federation is configured (see
-# GITHUB_ACTIONS_SETUP.md). After WIF is verified working with one
-# successful manual run, uncomment the `push` trigger below to auto-deploy
-# on merges to main.
+# Auto-deploys on every push to main (typically via merged PR). The
+# manual workflow_dispatch trigger is preserved for emergency redeploys
+# or rollbacks without a code change.
 on:
   workflow_dispatch:
     inputs:
@@ -11,8 +10,15 @@ on:
         description: 'Why are you deploying? (shows up in run history)'
         required: false
         default: 'manual deploy'
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      # Doc-only changes shouldn't trigger a 5-minute build + deploy.
+      - '**/*.md'
+      - 'docs/**'
+      - 'audit/**'
+      - '.gitignore'
+      - '.dockerignore'
 
 env:
   PROJECT_ID: formgenome
