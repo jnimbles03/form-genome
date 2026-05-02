@@ -47,17 +47,23 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Build & push image
-        # `--region=$REGION` runs a regional Cloud Build, which writes logs
-        # to a regional bucket the deployer SA can access. Without it,
-        # global Cloud Build streams logs from a project-default bucket
-        # that requires project-Viewer on the caller — least-privilege SAs
-        # error after ~2 min with "This tool can only stream logs if you
-        # are Viewer/Owner of the project".
-        # `gcloud builds submit` accepts only one --tag, so we tag with the
-        # commit SHA here and add :latest separately.
+        # The deployer SA is least-privileged and CANNOT read the
+        # project-default Cloud Build logs bucket. Without an override,
+        # `gcloud builds submit` blocks for ~2 min trying to stream logs
+        # then errors with "This tool can only stream logs if you are
+        # Viewer/Owner of the project".
+        #
+        # Fix: --default-buckets-behavior=REGIONAL_USER_OWNED_BUCKET makes
+        # Cloud Build write source + logs to a user-owned regional bucket
+        # that the SA owns (and therefore can read). No additional IAM
+        # grants required.
+        #
+        # `gcloud builds submit` accepts only one --tag, so we tag with
+        # the commit SHA here and add :latest separately.
         run: |
           gcloud builds submit . \
             --region="$REGION" \
+            --default-buckets-behavior=REGIONAL_USER_OWNED_BUCKET \
             --tag "$IMAGE:${GITHUB_SHA}" \
             --machine-type=e2-highcpu-8 \
             --project="$PROJECT_ID"
