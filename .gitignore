@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Secrets / credentials
+*.pem
+*.key
+service-account*.json
+
+# Logs and ad-hoc run artifacts
+*.log
+*_checkpoint.json
+*_export_*.csv
+*_Analysis_Report_*.html
+*_Forms_Export_*.csv
+*_Forms_Report_*.html
+*_Forms_List_*.html
+*_Parallel_Analysis_*.html
+*_Downloaded_Forms_Report_*.html
+
+# Local databases / dumps
+*.db
+*.db-*
+*.db.backup-*
+formgenome.db
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Backups / broken / archive blobs
+*.bak
+*.broken
+Archive.zip
+
+# Build / cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
