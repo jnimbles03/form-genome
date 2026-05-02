@@ -2,6 +2,7 @@
 # Dual-mode record store: SQLite (local) or PostgreSQL Cloud SQL (production)
 import os, json, logging, threading, time, hashlib, sqlite3
 from typing import Any, Dict, Iterable, List, Optional
+from urllib.parse import urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,82 @@ def _put_pg_conn(conn):
 # -----------------------------
 _SQLITE_PATH = None
 _SQLITE_LOCK = threading.Lock()
+
+# -----------------------------
+# Background Cloud Storage Sync (SQLite mode only)
+# -----------------------------
+# These globals coordinate a single daemon thread that periodically uploads
+# the local SQLite DB to Cloud Storage instead of doing it inline on every
+# save(). See _schedule_cloud_sync() and _cloud_sync_daemon().
+_SYNC_DAEMON_LOCK = threading.Lock()
+_SYNC_DAEMON_THREAD = None
+_SYNC_DIRTY_SINCE: Optional[float] = None  # epoch seconds of first dirty save
+_SYNC_LAST_UPLOAD: float = 0.0
+_SYNC_INTERVAL_SECS: int = 60  # how often the daemon wakes up
+
+def _schedule_cloud_sync() -> None:
+    """
+    Mark the local DB as dirty and (lazily) start the background sync daemon.
+
+    Called from save() / batch_save() in SQLite mode. Replaces the previous
+    inline call to db_sync.upload_to_cloud(), which held _SQLITE_LOCK and
+    re-downloaded the cloud copy on every save.
+
+    Cheap and non-blocking: just records a timestamp and ensures the daemon
+    is running.
+    """
+    global _SYNC_DAEMON_THREAD, _SYNC_DIRTY_SINCE
+    now = time.time()
+    if _SYNC_DIRTY_SINCE is None:
+        _SYNC_DIRTY_SINCE = now
+
+    if _SYNC_DAEMON_THREAD is not None and _SYNC_DAEMON_THREAD.is_alive():
+        return
+
+    with _SYNC_DAEMON_LOCK:
+        if _SYNC_DAEMON_THREAD is not None and _SYNC_DAEMON_THREAD.is_alive():
+            return
+        t = threading.Thread(
+            target=_cloud_sync_daemon,
+            name="storage-cloud-sync",
+            daemon=True,
+        )
+        _SYNC_DAEMON_THREAD = t
+        t.start()
+        logger.info("Started background Cloud Storage sync daemon")
+
+def _cloud_sync_daemon() -> None:
+    """
+    Background loop: every _SYNC_INTERVAL_SECS, upload to Cloud Storage if
+    there have been saves since the last successful upload.
+
+    Daemon thread (daemon=True) — does not block process exit.
+    """
+    global _SYNC_DIRTY_SINCE, _SYNC_LAST_UPLOAD
+    while True:
+        try:
+            time.sleep(_SYNC_INTERVAL_SECS)
+            dirty_since = _SYNC_DIRTY_SINCE
+            if dirty_since is None:
+                continue
+            if dirty_since <= _SYNC_LAST_UPLOAD:
+                # Nothing new since last successful upload.
+                continue
+            try:
+                from app.services import db_sync
+                # Snapshot dirty marker before upload so concurrent saves
+                # arriving during the upload still trigger a future cycle.
+                snapshot = time.time()
+                db_sync.upload_to_cloud()
+                _SYNC_LAST_UPLOAD = snapshot
+                # If no new saves happened during upload, clear the dirty flag.
+                if _SYNC_DIRTY_SINCE is not None and _SYNC_DIRTY_SINCE <= snapshot:
+                    _SYNC_DIRTY_SINCE = None
+            except Exception as e:
+                logger.warning("Background cloud sync failed: %s", e)
+        except Exception as e:
+            # Never let the daemon die.
+            logger.exception("Cloud sync daemon loop error: %s", e)
 
 def _init_sqlite(db_path: Optional[str] = None):
     """Initialize SQLite database"""
@@ -218,15 +295,68 @@ def _put_conn(conn):
 def _now() -> int:
     return int(time.time())
 
+def _normalize_url(url: str) -> str:
+    """
+    Normalize a URL for use as a deterministic identity key.
+
+    Lowercases scheme + host, strips default ports (80/443), trims trailing
+    slash on the path, and discards URL fragments. Query string is preserved
+    because two URLs differing only in query params almost always represent
+    different forms (e.g. ?formId=abc vs ?formId=def).
+    """
+    if not url:
+        return ""
+    try:
+        parts = urlsplit(url.strip())
+        scheme = (parts.scheme or "").lower()
+        host = (parts.hostname or "").lower()
+        port = parts.port
+        # Strip default ports
+        if port is not None and not (
+            (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
+        ):
+            netloc = f"{host}:{port}"
+        else:
+            netloc = host
+        path = parts.path or ""
+        if len(path) > 1 and path.endswith("/"):
+            path = path.rstrip("/")
+        # Drop fragment, preserve query
+        return urlunsplit((scheme, netloc, path, parts.query, ""))
+    except Exception:
+        return url.strip()
+
 def _make_id(record: Dict[str, Any]) -> str:
     """
-    Prefer existing id; else make a stableish id from URL/name/time.
+    Build a deterministic record id.
+
+    Deterministic IDs are required so re-crawls upsert the existing row
+    instead of inserting a duplicate. Callers MUST pass `source_url`
+    (or a pre-computed `id`/`_id`).
+
+    Resolution order:
+      1. Existing `id` or `_id` field (used as-is).
+      2. SHA1 of `_normalize_url(source_url)`, truncated to 16 hex chars.
+         16 hex chars = 64 bits of entropy, sufficient for collision
+         resistance at our scale (~100k rows).
+      3. Fallback: SHA1 of `src|name|now|urandom` for legacy records that
+         lack source_url. This is non-deterministic and a logger.warning is
+         emitted so the caller is visible. New code should never hit this.
     """
     rid = str(record.get("id") or record.get("_id") or "").strip()
     if rid:
         return rid
-    src = str(record.get("source_url") or record.get("url") or "")
+    src = str(record.get("source_url") or record.get("url") or "").strip()
+    if src:
+        normalized = _normalize_url(src)
+        return hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:16]
+    # Legacy fallback: should not happen in new code paths.
     name = str(record.get("form_name") or record.get("form_title") or "")
+    logger.warning(
+        "_make_id called with no source_url and no id; falling back to "
+        "non-deterministic id (form_name=%s). Re-crawls will produce duplicates.",
+        name[:80],
+    )
     blob = f"{src}|{name}|{_now()}|{os.urandom(4).hex()}"
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()
 
@@ -273,14 +403,13 @@ def save(record: Dict[str, Any]) -> str:
         cur.close()
         _put_conn(conn)
 
-    # Sync to Cloud Storage (only for SQLite mode, not PostgreSQL)
+    # Sync to Cloud Storage (only for SQLite mode, not PostgreSQL).
+    # Schedule a background sync rather than blocking the request.
     if not _is_postgres_mode():
         try:
-            from app.services import db_sync
-            db_sync.upload_to_cloud()
+            _schedule_cloud_sync()
         except Exception as e:
-            import logging
-            logging.warning(f"Failed to sync database to cloud: {e}")
+            logger.warning("Failed to schedule cloud sync: %s", e)
 
     return rid
 
@@ -345,6 +474,13 @@ def batch_save(records: List[Dict[str, Any]]) -> int:
     finally:
         cur.close()
         _put_conn(conn)
+
+    # Schedule a background cloud sync (SQLite mode only).
+    if not _is_postgres_mode() and count > 0:
+        try:
+            _schedule_cloud_sync()
+        except Exception as e:
+            logger.warning("Failed to schedule cloud sync after batch_save: %s", e)
 
     return count
 
@@ -790,16 +926,80 @@ def delete_ids(ids: Iterable[str]) -> int:
         cur.close()
         _put_conn(conn)
 
+# Chunk size for SQLite IN (...) clauses to stay under the default
+# SQLITE_MAX_VARIABLE_NUMBER expression limit (~999).
+_SQLITE_DELETE_CHUNK = 500
+
+
+def _delete_ids_chunked_sqlite(cur, ids: List[str]) -> int:
+    """Issue chunked DELETE WHERE id IN (...) statements for SQLite."""
+    total = 0
+    for start in range(0, len(ids), _SQLITE_DELETE_CHUNK):
+        chunk = ids[start:start + _SQLITE_DELETE_CHUNK]
+        if not chunk:
+            continue
+        placeholders = ",".join("?" * len(chunk))
+        cur.execute(f"DELETE FROM records WHERE id IN ({placeholders});", chunk)
+        total += cur.rowcount or 0
+    return total
+
+
 def delete_uncommitted() -> int:
     """
     Delete all records where committed != true.
+
+    Postgres: pushes the predicate into SQL via JSONB; no id list materialized.
+    SQLite: streams ids that fail the JSON committed-check, then chunks the
+    DELETE in batches of _SQLITE_DELETE_CHUNK to stay under SQLite's
+    expression-tree limit.
     """
     conn = _get_conn()
     cur = conn.cursor()
     try:
+        if _is_postgres_mode():
+            # Single SQL DELETE — no Python row iteration, no id list.
+            try:
+                cur.execute("""
+                DELETE FROM records
+                WHERE (data::jsonb->>'committed') IS NULL
+                   OR lower((data::jsonb->>'committed')::text) NOT IN ('true', '1', 'yes')
+                """)
+                rowcount = cur.rowcount or 0
+                conn.commit()
+                return int(rowcount)
+            except Exception as e:
+                # Fall back to row-iterating delete if JSONB query fails
+                # (e.g. null bytes in data). Reload cursor after error.
+                logger.warning(
+                    "Postgres JSONB delete_uncommitted failed, falling back: %s", e
+                )
+                cur.close()
+                _put_conn(conn)
+                conn = _get_conn()
+                cur = conn.cursor()
+                # Drop into the SQLite-style path using ANY()
+                cur.execute("SELECT id, data FROM records;")
+                ids: List[str] = []
+                for row in cur:
+                    rid = row[0]
+                    try:
+                        d = json.loads(row[1])
+                    except Exception:
+                        ids.append(rid)
+                        continue
+                    if not (d.get("committed") is True or str(d.get("committed") or "").lower() in ("1", "true", "yes")):
+                        ids.append(rid)
+                if not ids:
+                    return 0
+                cur.execute("DELETE FROM records WHERE id = ANY(%s);", (ids,))
+                rowcount = cur.rowcount or 0
+                conn.commit()
+                return int(rowcount)
+
+        # SQLite path: stream rows, accumulate ids, chunk the DELETE.
         cur.execute("SELECT id, data FROM records;")
-        ids = []
-        for row in cur.fetchall():
+        ids: List[str] = []
+        for row in cur:
             rid = row[0]
             try:
                 d = json.loads(row[1])
@@ -810,29 +1010,72 @@ def delete_uncommitted() -> int:
                 ids.append(rid)
         if not ids:
             return 0
-
-        if _is_postgres_mode():
-            cur.execute("DELETE FROM records WHERE id = ANY(%s);", (ids,))
-        else:
-            placeholders = ",".join("?" * len(ids))
-            cur.execute(f"DELETE FROM records WHERE id IN ({placeholders});", ids)
-        rowcount = cur.rowcount
+        rowcount = _delete_ids_chunked_sqlite(cur, ids)
         conn.commit()
-        return rowcount
+        return int(rowcount)
     finally:
         cur.close()
         _put_conn(conn)
 
+
 def delete_empty() -> int:
     """
     Delete records whose data is empty or missing source_url AND pages==0 AND complexity==0.
+
+    Postgres: SQL predicate via JSONB.
+    SQLite: streams rows, chunks the DELETE.
     """
     conn = _get_conn()
     cur = conn.cursor()
     try:
+        if _is_postgres_mode():
+            try:
+                cur.execute("""
+                DELETE FROM records
+                WHERE data IS NULL
+                   OR data = ''
+                   OR (
+                        COALESCE(NULLIF(TRIM(data::jsonb->>'source_url'), ''), '') = ''
+                        AND COALESCE((data::jsonb->>'pages')::int, 0) = 0
+                        AND COALESCE((data::jsonb->>'complexity_score')::float, 0.0) = 0.0
+                   )
+                """)
+                rowcount = cur.rowcount or 0
+                conn.commit()
+                return int(rowcount)
+            except Exception as e:
+                logger.warning(
+                    "Postgres JSONB delete_empty failed, falling back: %s", e
+                )
+                cur.close()
+                _put_conn(conn)
+                conn = _get_conn()
+                cur = conn.cursor()
+                cur.execute("SELECT id, data FROM records;")
+                ids: List[str] = []
+                for row in cur:
+                    rid = row[0]
+                    try:
+                        d = json.loads(row[1])
+                    except Exception:
+                        ids.append(rid)
+                        continue
+                    src = (d.get("source_url") or "").strip()
+                    pages = int(d.get("pages") or 0)
+                    cx = float(d.get("complexity_score") or 0.0)
+                    if (not d) or (not src and pages == 0 and cx == 0.0):
+                        ids.append(rid)
+                if not ids:
+                    return 0
+                cur.execute("DELETE FROM records WHERE id = ANY(%s);", (ids,))
+                rowcount = cur.rowcount or 0
+                conn.commit()
+                return int(rowcount)
+
+        # SQLite path: stream rows, accumulate ids, chunk DELETE.
         cur.execute("SELECT id, data FROM records;")
-        ids = []
-        for row in cur.fetchall():
+        ids: List[str] = []
+        for row in cur:
             rid = row[0]
             try:
                 d = json.loads(row[1])
@@ -846,26 +1089,46 @@ def delete_empty() -> int:
                 ids.append(rid)
         if not ids:
             return 0
-
-        if _is_postgres_mode():
-            cur.execute("DELETE FROM records WHERE id = ANY(%s);", (ids,))
-        else:
-            placeholders = ",".join("?" * len(ids))
-            cur.execute(f"DELETE FROM records WHERE id IN ({placeholders});", ids)
-        rowcount = cur.rowcount
+        rowcount = _delete_ids_chunked_sqlite(cur, ids)
         conn.commit()
-        return rowcount
+        return int(rowcount)
     finally:
         cur.close()
         _put_conn(conn)
 
+
 def count_empty() -> int:
+    """
+    Count records that delete_empty() would remove. Pushes predicate into SQL
+    where possible.
+    """
     conn = _get_conn()
     cur = conn.cursor()
     try:
+        if _is_postgres_mode():
+            try:
+                cur.execute("""
+                SELECT COUNT(*) FROM records
+                WHERE data IS NULL
+                   OR data = ''
+                   OR (
+                        COALESCE(NULLIF(TRIM(data::jsonb->>'source_url'), ''), '') = ''
+                        AND COALESCE((data::jsonb->>'pages')::int, 0) = 0
+                        AND COALESCE((data::jsonb->>'complexity_score')::float, 0.0) = 0.0
+                   )
+                """)
+                return int(cur.fetchone()[0])
+            except Exception as e:
+                logger.warning("Postgres JSONB count_empty failed, falling back: %s", e)
+                cur.close()
+                _put_conn(conn)
+                conn = _get_conn()
+                cur = conn.cursor()
+
+        # SQLite path: still streams rows but does not load all into memory.
         cur.execute("SELECT data FROM records;")
         n = 0
-        for row in cur.fetchall():
+        for row in cur:
             try:
                 d = json.loads(row[0])
             except Exception:
@@ -1189,15 +1452,38 @@ def get_analysis_stats() -> Dict[str, Any]:
 # -----------------------------
 # Helper functions for update_one/update_many
 # -----------------------------
-def _load_one(rec_id: str) -> Dict[str, Any] | None:
-    """Load a single record by ID"""
+def _load_one_indexed(rec_id: str) -> Dict[str, Any] | None:
+    """
+    Load a single record by ID using a targeted SELECT (uses primary key
+    index — no full table scan, no JSON-parsing of every row).
+    """
+    if not rec_id:
+        return None
+    conn = _get_conn()
+    cur = conn.cursor()
     try:
-        for r in list_all():
-            if str(r.get("id")) == str(rec_id):
-                return dict(r)
-    except Exception:
-        pass
-    return None
+        if _is_postgres_mode():
+            cur.execute("SELECT id, ts, data FROM records WHERE id = %s", (str(rec_id),))
+        else:
+            cur.execute("SELECT id, ts, data FROM records WHERE id = ?", (str(rec_id),))
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            record = json.loads(row[2])
+        except Exception:
+            return None
+        record["id"] = row[0]
+        record["ts"] = row[1]
+        return record
+    finally:
+        cur.close()
+        _put_conn(conn)
+
+# Backwards-compatible alias. Prefer _load_one_indexed in new code.
+def _load_one(rec_id: str) -> Dict[str, Any] | None:
+    """Load a single record by ID (indexed; constant time per call)."""
+    return _load_one_indexed(rec_id)
 
 def _save_one(record: Dict[str, Any]) -> int:
     """Save a single record"""
@@ -1212,12 +1498,28 @@ def update_one(rec_id: str, updates: Dict[str, Any]) -> int:
     """
     Merge `updates` into the existing record with id=rec_id and persist.
     Returns number of rows updated (0 or 1).
+
+    Routes through update_record() so the SQL UPDATE happens against the
+    primary-key index — no list_all() scan, no JSON parse of unrelated rows,
+    and no per-row Cloud Storage upload.
     """
-    rec = _load_one(rec_id)
-    if not rec:
+    if not rec_id:
         return 0
-    rec.update(updates)
-    return _save_one(rec)
+    try:
+        ok = update_record(str(rec_id), updates or {})
+    except Exception as e:
+        logger.warning("update_one(%s) failed: %s", rec_id, e)
+        return 0
+    if not ok:
+        return 0
+    # update_record() bypasses save() and therefore the cloud-sync schedule;
+    # reschedule a sync here so SQLite-mode persistence still happens.
+    if not _is_postgres_mode():
+        try:
+            _schedule_cloud_sync()
+        except Exception as e:
+            logger.warning("Failed to schedule cloud sync after update_one: %s", e)
+    return 1
 
 def update_many(ids: Iterable[str], updates: Dict[str, Any]) -> int:
     """
@@ -1230,3 +1532,106 @@ def update_many(ids: Iterable[str], updates: Dict[str, Any]) -> int:
         except Exception:
             continue
     return count
+
+
+# ---------------------------------------------------------------------------
+# Indexed helpers (added to replace list_all() scans on the analyze hot path).
+# Both helpers use the indexed `source_url` column on the records table.
+# Added by F-AP-04 / F-AP-10 fix; see app/api/analyze.py for usage.
+# ---------------------------------------------------------------------------
+def get_by_source_url(source_url: str) -> Optional[Dict[str, Any]]:
+    """
+    Return the most recent record whose source_url matches exactly, or None.
+
+    Uses the existing idx_records_source index — no JSON scan required.
+    Replaces the previous pattern of calling list_all() then Python-side
+    filtering, which was O(N) per analyze.
+    """
+    if not source_url:
+        return None
+    conn = _get_conn()
+    cur = conn.cursor()
+    try:
+        if _is_postgres_mode():
+            cur.execute(
+                "SELECT id, ts, data FROM records WHERE source_url = %s "
+                "ORDER BY ts DESC LIMIT 1;",
+                (source_url,),
+            )
+        else:
+            cur.execute(
+                "SELECT id, ts, data FROM records WHERE source_url = ? "
+                "ORDER BY ts DESC LIMIT 1;",
+                (source_url,),
+            )
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            record = json.loads(row[2])
+        except Exception as e:
+            logger.warning("get_by_source_url: failed to parse record JSON: %s", e)
+            return None
+        record["id"] = row[0]
+        record["ts"] = row[1]
+        return record
+    finally:
+        cur.close()
+        _put_conn(conn)
+
+
+def find_by_base_form_pattern(pattern: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Return a small candidate list of records whose source_url *might* share
+    the supplied base form pattern (a normalized lowercased form name like
+    `pub_223` or `sf-86`).
+
+    There is no dedicated index for base_form_pattern yet, so this uses the
+    indexed `source_url` column with a LIKE/ILIKE filter on `%pattern%`. The
+    result is intentionally bounded by `limit` to keep the candidate list
+    small enough that downstream linear scans (language_dedup) stay cheap.
+
+    NOTE: This is a best-effort prefilter, not a precise match. The caller
+    is expected to apply the strict comparison (same base pattern, same
+    page count, same domain) on the returned list.
+
+    TODO: A proper fix is to persist `base_form_pattern` as its own
+    indexed column on records and query it directly. Tracked separately.
+    """
+    if not pattern:
+        return []
+    needle = f"%{pattern}%"
+    conn = _get_conn()
+    cur = conn.cursor()
+    try:
+        if _is_postgres_mode():
+            cur.execute(
+                "SELECT id, ts, data FROM records "
+                "WHERE source_url ILIKE %s "
+                "ORDER BY ts DESC LIMIT %s;",
+                (needle, int(limit)),
+            )
+        else:
+            cur.execute(
+                "SELECT id, ts, data FROM records "
+                "WHERE LOWER(source_url) LIKE LOWER(?) "
+                "ORDER BY ts DESC LIMIT ?;",
+                (needle, int(limit)),
+            )
+        out: List[Dict[str, Any]] = []
+        for row in cur.fetchall():
+            try:
+                record = json.loads(row[2])
+            except Exception as e:
+                logger.warning(
+                    "find_by_base_form_pattern: failed to parse JSON for id=%s: %s",
+                    row[0], e,
+                )
+                continue
+            record["id"] = row[0]
+            record["ts"] = row[1]
+            out.append(record)
+        return out
+    finally:
+        cur.close()
+        _put_conn(conn)
