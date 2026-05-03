@@ -203,6 +203,69 @@ def list_records():
         }
     })
 
+@bp.get("/records/<string:record_id>")
+def get_record(record_id: str):
+    """
+    GET /api/records/<id>
+
+    Returns the full stored record for a single form, including all metadata
+    fields and a computed conversion cost estimate.  Unlike GET /api/records
+    (which strips to UI_FIELDS for performance), this endpoint returns
+    everything stored in the JSON blob.
+    """
+    from app.services.analyzer import estimate_conversion_cost
+
+    matches = storage.list_by_ids([record_id])
+    if not matches:
+        return jsonify({"ok": False, "error": "Record not found"}), 404
+
+    record = matches[0]
+
+    # Conversion cost estimate
+    conversion = estimate_conversion_cost(record)
+
+    # Action / difficulty summary (mirrors analyze endpoint)
+    action_type = record.get("action_type", "")
+    requires_action = action_type not in ("Disclosure (No Signature, No Info Collection)",)
+    complexity_score = float(record.get("complexity_score") or 0)
+    if complexity_score >= 70:
+        complexity_tier = "very_complex"
+    elif complexity_score >= 45:
+        complexity_tier = "complex"
+    elif complexity_score >= 20:
+        complexity_tier = "moderate"
+    else:
+        complexity_tier = "simple"
+
+    # Strip internal debug fields before returning
+    _SKIP = {"full_text", "_vision_data", "_flags", "title_debug",
+             "quality_signals"}
+    metadata = {k: v for k, v in record.items() if k not in _SKIP}
+
+    return jsonify({
+        "ok": True,
+        "id": record_id,
+
+        # ── 3-question summary ───────────────────────────────────────
+        "summary": {
+            "requires_action": requires_action,
+            "action_type": action_type,
+            "difficulty": {
+                "complexity_score": complexity_score,
+                "complexity_tier": complexity_tier,
+                "nigo_score": float(record.get("nigo_score") or 0),
+                "key_drivers": record.get("key_drivers", []),
+                "estimated_signer_time_min": record.get("estimated_signer_time"),
+                "estimated_processing_time_min": record.get("estimated_processing_time"),
+            },
+            "conversion": conversion,
+        },
+
+        # ── Full metadata table ──────────────────────────────────────
+        "metadata": metadata,
+    })
+
+
 @bp.get("/records/sample")
 def list_records_sample():
     """Tiny helper for sanity checks."""

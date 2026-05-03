@@ -707,6 +707,117 @@ def calculate_form_value(
     return ("none", 0.0)
 
 
+def estimate_conversion_cost(record: dict) -> dict:
+    """
+    Estimate the effort and cost to convert a paper/PDF form into a guided
+    wizard experience (e.g. DocuSign, web form, CLM workflow).
+
+    Returns:
+        {
+            "effort_hours": int,          # estimated engineering hours
+            "cost_usd": int,              # at $150/hr blended rate
+            "tier": str,                  # "simple" | "moderate" | "complex" | "very_complex"
+            "cost_drivers": list[str],    # human-readable list of what's driving cost up
+        }
+    """
+    HOURLY_RATE = 150  # blended design + engineering rate
+
+    hours = 8.0  # base: every form has discovery, QA, deploy
+    drivers: list[str] = []
+
+    field_count      = int(record.get("field_count") or 0)
+    sig_count        = int((record.get("signature_analysis") or {}).get("signature_count")
+                           or record.get("signature_count") or 0)
+    pages            = int(record.get("pages") or 0)
+    conditional      = bool(record.get("conditional_logic"))
+    notarization     = bool(record.get("notarization_required"))
+    attachments      = bool(record.get("attachments_required"))
+    identification   = bool(record.get("identification_required"))
+    third_party      = bool(record.get("third_party_involved"))
+    payment          = bool(record.get("payment_required"))
+    data_validation  = int(record.get("data_validation_fields") or 0)
+    witnesses        = bool(record.get("witnesses_required"))
+
+    # Field mapping: 1 hr per 10 fields
+    if field_count > 0:
+        field_hours = round(field_count / 10, 1)
+        hours += field_hours
+        if field_count >= 10:
+            drivers.append(f"{field_count} fields to map ({field_hours:.0f} hrs)")
+
+    # Signature routing: 2 hrs per signer
+    if sig_count > 0:
+        sig_hours = sig_count * 2
+        hours += sig_hours
+        drivers.append(f"{sig_count} signature route{'s' if sig_count > 1 else ''} ({sig_hours} hrs)")
+
+    # Conditional logic: branching wizard paths
+    if conditional:
+        hours += 8
+        drivers.append("Conditional logic — branching wizard paths (+8 hrs)")
+
+    # Notarization: requires specialized integration or out-of-band step
+    if notarization:
+        hours += 10
+        drivers.append("Notarization required — specialized integration (+10 hrs)")
+
+    # Witnesses: additional signer coordination
+    if witnesses:
+        hours += 6
+        drivers.append("Witness signatures — additional routing (+6 hrs)")
+
+    # Attachments: upload/validation UX
+    if attachments:
+        hours += 4
+        drivers.append("Attachment collection — upload + validation UX (+4 hrs)")
+
+    # ID verification: identity check integration
+    if identification:
+        hours += 5
+        drivers.append("ID verification — identity check integration (+5 hrs)")
+
+    # Third-party involvement: external systems or signers
+    if third_party:
+        hours += 5
+        drivers.append("Third-party involvement — external coordination (+5 hrs)")
+
+    # Payment processing: payment gateway integration
+    if payment:
+        hours += 6
+        drivers.append("Payment processing — gateway integration (+6 hrs)")
+
+    # Data validation fields: lookup/verify steps (SSN, account #, etc.)
+    if data_validation > 0:
+        dv_hours = min(8, data_validation * 1.5)
+        hours += dv_hours
+        drivers.append(f"{data_validation} validation field(s) — lookup/verify steps (+{dv_hours:.0f} hrs)")
+
+    # Extra pages: more content review
+    if pages > 4:
+        extra = (pages - 4) * 1
+        hours += extra
+        drivers.append(f"{pages} pages — extended content review (+{extra} hrs)")
+
+    hours = round(hours)
+    cost  = hours * HOURLY_RATE
+
+    if hours <= 20:
+        tier = "simple"
+    elif hours <= 40:
+        tier = "moderate"
+    elif hours <= 65:
+        tier = "complex"
+    else:
+        tier = "very_complex"
+
+    return {
+        "effort_hours": hours,
+        "cost_usd":     cost,
+        "tier":         tier,
+        "cost_drivers": drivers,
+    }
+
+
 # Data validation - fields requiring lookup/verification
 _DATA_VALIDATION_PAT = re.compile(
     r"\b(SSN|Social Security Number|TIN|Tax ID|Taxpayer ID|EIN|Employer ID|"

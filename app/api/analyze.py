@@ -239,27 +239,70 @@ def analyze_pdf():
             # Don't fail the request if logging fails
             print(f"Failed to log analysis activity: {log_err}")
 
+        # Build conversion cost estimate
+        conversion = analyzer.estimate_conversion_cost(record)
+
+        # Determine requires_action flag
+        action_type = record.get("action_type", "")
+        requires_action = action_type not in (
+            "Disclosure (No Signature, No Info Collection)",
+        )
+
+        # Complexity tier label
+        complexity_score = float(record.get("complexity_score") or 0)
+        if complexity_score >= 70:
+            complexity_tier = "very_complex"
+        elif complexity_score >= 45:
+            complexity_tier = "complex"
+        elif complexity_score >= 20:
+            complexity_tier = "moderate"
+        else:
+            complexity_tier = "simple"
+
+        # Full metadata table — every stored field except internal/debug
+        _SKIP = {"full_text", "_vision_data", "_flags", "title_debug",
+                 "quality_signals", "confidence_tier", "confidence_score"}
+        metadata = {k: v for k, v in record.items() if k not in _SKIP}
+
         return jsonify({
             "ok": True,
             "id": rid,
             "saved": should_save,
             "committed": record.get("committed", False) if should_save else None,
             "status": record.get("status"),
-            "pages": record.get("pages"),
-            "complexity": record.get("complexity_score"),
             "parse_error": record.get("parse_error"),
-            "source_url": record.get("source_url"),
-            # Quality information
+            "merged_as_language_variant": merged,
+
+            # ── 3-question summary ───────────────────────────────────────────
+            "summary": {
+                # Q1: Does this form require action?
+                "requires_action": requires_action,
+                "action_type": action_type,
+
+                # Q2: How hard is that action?
+                "difficulty": {
+                    "complexity_score": complexity_score,
+                    "complexity_tier": complexity_tier,
+                    "nigo_score": float(record.get("nigo_score") or 0),
+                    "key_drivers": record.get("key_drivers", []),
+                    "estimated_signer_time_min": record.get("estimated_signer_time"),
+                    "estimated_processing_time_min": record.get("estimated_processing_time"),
+                },
+
+                # Q3: What does it cost to convert to a guided wizard?
+                "conversion": conversion,
+            },
+
+            # ── Quality / confidence ─────────────────────────────────────────
             "quality": {
                 "confidence_tier": confidence_tier,
                 "confidence_score": confidence_score,
                 "signals": quality_signals,
-                "auto_committed": auto_commit and should_save and not existing_record
+                "auto_committed": auto_commit and should_save and not existing_record,
             },
-            "industry_vertical": record.get("industry_vertical"),
-            "industry_subvertical": record.get("industry_subvertical"),
-            "form_name": record.get("form_name"),
-            "merged_as_language_variant": merged  # Indicate if this was merged
+
+            # ── Full metadata table ──────────────────────────────────────────
+            "metadata": metadata,
         })
 
     except Exception as e:
