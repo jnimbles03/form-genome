@@ -143,7 +143,24 @@ def create_app() -> Flask:
     }
 
     def _api_auth_gate():
-        """Block unauthenticated requests to /api/* except for an allowlist."""
+        """Block unauthenticated requests to /api/* except for an allowlist.
+
+        Two ways a request can be authenticated for /api/* routes:
+
+        1. Flask-Login session cookie — set after a successful OAuth flow
+           through `/login` (the browser case).
+        2. Cloud Run IAM identity token in `Authorization: Bearer ...` —
+           when Cloud Run is deployed with `--no-allow-unauthenticated`
+           the platform itself validates the token and the granted
+           `roles/run.invoker` BEFORE forwarding the request, so by the
+           time we see the Authorization header here, GCP has already
+           confirmed the caller is on the invoker allowlist. We don't
+           re-validate; we trust that gate.
+
+        Once IAP lands, the third path becomes
+        `X-Goog-Authenticated-User-Email` (set by IAP) which is even
+        cleaner — the Flask gate can fall back to that.
+        """
         path = request.path or ""
         if not path.startswith("/api/"):
             return None
@@ -153,9 +170,16 @@ def create_app() -> Flask:
         for public in API_PUBLIC_PATHS:
             if path == public or path.startswith(public.rstrip("/") + "/"):
                 return None
-        if not getattr(current_user, "is_authenticated", False):
-            return jsonify({"ok": False, "error": "authentication required"}), 401
-        return None
+        # (1) Browser session.
+        if getattr(current_user, "is_authenticated", False):
+            return None
+        # (2) Cloud Run IAM identity token. Presence is sufficient: an
+        # invalid token never reaches us when the service is deployed
+        # with --no-allow-unauthenticated.
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer ") and len(auth_header) > 32:
+            return None
+        return jsonify({"ok": False, "error": "authentication required"}), 401
 
     app.before_request(_api_auth_gate)
 
