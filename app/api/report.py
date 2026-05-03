@@ -258,6 +258,15 @@ def generate_report():
     # 2) Backfill action_type (never crash if missing)
     rows = _backfill_action_type(rows)
 
+    # 3) Enrich each row with per-form conversion cost estimate
+    try:
+        from app.services.analyzer import estimate_conversion_cost
+        for r in rows:
+            if "conversion" not in r:
+                r["conversion"] = estimate_conversion_cost(r)
+    except Exception as _ce:
+        print(f"[REPORT] conversion cost enrichment failed (non-fatal): {_ce}", flush=True)
+
     # Check if we have any data to report
     if not rows:
         print(f"[REPORT] ⚠️  WARNING: No records match the filters. ids_filter={len(ids_filter) if isinstance(ids_filter, list) else 0}, committed_only={committed_only}, public_only={public_only}", flush=True)

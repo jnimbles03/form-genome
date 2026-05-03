@@ -45,6 +45,33 @@ a.formname:hover{opacity:.75;text-decoration:underline}
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;font-size:14px;color:#555}
 .pager button{border:1px solid var(--hair);background:#fff;border-radius:10px;padding:6px 10px;cursor:pointer}
 .pager button[disabled]{opacity:.5;cursor:not-allowed}
+/* ── Conversion Calculator ─────────────────────────────────── */
+.calc-card{background:var(--card);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:clamp(18px,3vw,28px);margin-top:28px}
+.calc-header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:20px}
+.calc-header h2{margin:0}
+.calc-header .sub{margin:0}
+.calc-inputs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;margin-bottom:24px}
+@media(max-width:600px){.calc-inputs{grid-template-columns:1fr;}.calc-arrow{display:none}}
+.calc-field label{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--note);margin-bottom:6px}
+.price-wrap{display:flex;align-items:center;border:1px solid var(--hair);border-radius:12px;background:#fff;overflow:hidden;transition:box-shadow .15s}
+.price-wrap:focus-within{box-shadow:0 0 0 3px rgba(11,110,79,.15);border-color:var(--accent)}
+.price-wrap span{padding:0 10px 0 14px;font-size:16px;font-weight:700;color:var(--accent)}
+.price-wrap input{border:0;outline:0;font-size:16px;font-weight:600;padding:10px 14px 10px 0;width:100%;background:transparent;color:var(--ink)}
+.calc-arrow{text-align:center;font-size:22px;color:#ccc}
+.calc-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.calc-tier{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;background:#f8f8f8}
+.calc-tier .t-label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--note);margin-bottom:4px}
+.calc-tier .t-count{font-size:13px;color:#555;margin-bottom:6px}
+.calc-tier .t-cost{font-weight:700;font-size:16px;color:var(--ink)}
+.calc-total{border:1px solid var(--accent);border-radius:12px;padding:12px 14px;background:#f0fdf7;grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.calc-total .t-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.calc-total .t-range{font-weight:800;font-size:20px;color:var(--accent)}
+.calc-total .t-note{font-size:12px;color:var(--note)}
+.cost-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.cost-simple{background:#e8f5e9;color:#2e7d32}
+.cost-moderate{background:#fff8e1;color:#f57f17}
+.cost-complex{background:#fce4ec;color:#c62828}
+.cost-very_complex{background:#f3e5f5;color:#6a1b9a}
 </style>
 </head>
 <body>
@@ -58,6 +85,7 @@ a.formname:hover{opacity:.75;text-decoration:underline}
       <div class="stat"><div class="num" id="stat-avg-complexity">0</div><div class="label">Average complexity score</div></div>
       <div class="stat"><div class="num" id="stat-hardest-name">—</div><div class="label">Hardest form</div></div>
       <div class="stat"><div class="num" id="stat-payment-total">—</div><div class="label">Total payment amounts</div></div>
+      <div class="stat"><div class="num" id="stat-conversion-total">—</div><div class="label">Est. total conversion cost</div></div>
     </div>
 
     <div class="hero-card" aria-label="What makes this hard">
@@ -83,6 +111,34 @@ a.formname:hover{opacity:.75;text-decoration:underline}
           <div><strong>High identification burden</strong><span class="badge" id="badge-pii">0% request ID/PII</span>
           <div class="note">Sensitive details create pause and slow completion when citizens don’t have documents on hand.</div></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Conversion Cost Calculator -->
+    <div class="calc-card" id="conversionCalculator">
+      <div class="calc-header">
+        <h2>Library Conversion Cost Calculator</h2>
+        <p class="sub">Set a floor and ceiling price per form — the system interpolates based on each form's complexity tier.</p>
+      </div>
+      <div class="calc-inputs">
+        <div class="calc-field">
+          <label>Floor — simplest form</label>
+          <div class="price-wrap">
+            <span>$</span>
+            <input type="number" id="priceFloor" value="1500" min="0" step="500" aria-label="Floor price per form">
+          </div>
+        </div>
+        <div class="calc-arrow">→</div>
+        <div class="calc-field">
+          <label>Ceiling — most complex form</label>
+          <div class="price-wrap">
+            <span>$</span>
+            <input type="number" id="priceCeiling" value="15000" min="0" step="500" aria-label="Ceiling price per form">
+          </div>
+        </div>
+      </div>
+      <div class="calc-results" id="calcResults">
+        <!-- filled by JS -->
       </div>
     </div>
 
@@ -116,6 +172,7 @@ a.formname:hover{opacity:.75;text-decoration:underline}
               <th data-col="form">Form Name</th>
               <th data-col="complexity">Complexity Score</th>
               <th data-col="nigo">NIGO Score</th>
+              <th data-col="cost">Est. Conversion Cost</th>
               <th data-col="notary">Notarization</th>
               <th data-col="attachments">Attachments</th>
               <th data-col="payment">Payment Required</th>
@@ -166,6 +223,26 @@ a.formname:hover{opacity:.75;text-decoration:underline}
 
   function yn(b) { return b ? 'Yes' : 'No'; }
   function escapeHTML(s) { return (s+'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]); }
+  function fmt$(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+
+  // Return the system-computed conversion cost for a row (from backend if available,
+  // else derive from complexity_score using a simple linear model).
+  function conversionCost(r) {
+    const c = r.conversion;
+    if (c && typeof c.cost_usd === 'number') return { cost: c.cost_usd, tier: c.tier || 'moderate', hours: c.effort_hours };
+    // Fallback: approximate from complexity_score
+    const score = r.complexity_score || 0;
+    const tiers = [
+      { max:20,  tier:'simple',       hours:11 },
+      { max:45,  tier:'moderate',     hours:28 },
+      { max:70,  tier:'complex',      hours:52 },
+      { max:Infinity, tier:'very_complex', hours:80 },
+    ];
+    const t = tiers.find(x => score <= x.max) || tiers[3];
+    return { cost: t.hours * 150, tier: t.tier, hours: t.hours };
+  }
+
+  const TIER_LABELS = { simple:'Simple', moderate:'Moderate', complex:'Complex', very_complex:'Very Complex' };
 
   function getKeyRequirements(r) {
     // Build a summary of key requirements from the form data
@@ -236,10 +313,14 @@ a.formname:hover{opacity:.75;text-decoration:underline}
       ? `<a href="${escapeHTML(sourceUrl)}" target="_blank" rel="noopener" class="formname">${escapeHTML(name || '')}</a>`
       : `<span class="formname">${escapeHTML(name || '')}</span>`;
 
+    const cv = conversionCost(r);
+    const costDisplay = `<span class="cost-pill cost-${cv.tier}">${fmt$(cv.cost)}</span><br><span style="font-size:11px;color:#888">${cv.hours}h · ${TIER_LABELS[cv.tier]||cv.tier}</span>`;
+
     return `<tr>
       <td>${formNameHTML}</td>
       <td>${compBar}</td>
       <td>${nigoBar}</td>
+      <td>${costDisplay}</td>
       <td>${yn(!!notary)}</td>
       <td>${yn(!!att)}</td>
       <td>${yn(!!payment)}</td>
@@ -291,13 +372,14 @@ a.formname:hover{opacity:.75;text-decoration:underline}
       'form_name',             // 0: Form name
       'complexity_score',      // 1: Complexity Score
       'nigo_score',            // 2: NIGO Score
-      'notarization_required', // 3: Notarization
-      'attachments_required',  // 4: Attachments
-      'payment_required',      // 5: Payment Required
-      'payment_amount',        // 6: Payment Amount
-      null,                    // 7: Data Validation (computed)
-      'conditional_logic',     // 8: Dependencies
-      null                     // 9: Key Requirements (computed)
+      null,                    // 3: Est. Conversion Cost (computed)
+      'notarization_required', // 4: Notarization
+      'attachments_required',  // 5: Attachments
+      'payment_required',      // 6: Payment Required
+      'payment_amount',        // 7: Payment Amount
+      null,                    // 8: Data Validation (computed)
+      'conditional_logic',     // 9: Dependencies
+      null                     // 10: Key Requirements (computed)
     ];
 
     const propName = colMap[col];
@@ -346,6 +428,7 @@ a.formname:hover{opacity:.75;text-decoration:underline}
     let countConditional = 0;
 
     let totalPaymentAmount = 0;
+    let totalConversionCost = 0;
 
     rows.forEach(r => {
       // Complexity tracking
@@ -369,6 +452,9 @@ a.formname:hover{opacity:.75;text-decoration:underline}
       if (typeof amount === 'number' && !isNaN(amount)) {
         totalPaymentAmount += amount;
       }
+
+      // Track conversion cost
+      totalConversionCost += conversionCost(r).cost;
     });
 
     const avgComplexity = Math.round(sumComplexity / total);
@@ -391,6 +477,11 @@ a.formname:hover{opacity:.75;text-decoration:underline}
     // Update payment total
     el('stat-payment-total').textContent = totalPaymentAmount > 0
       ? '$' + totalPaymentAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+      : '—';
+
+    // Update total conversion cost stat
+    el('stat-conversion-total').textContent = totalConversionCost > 0
+      ? '$' + Math.round(totalConversionCost).toLocaleString('en-US')
       : '—';
 
     // Update badges in "What makes this hard" section
@@ -572,7 +663,65 @@ a.formname:hover{opacity:.75;text-decoration:underline}
     });
   });
 
-  const init = () => render();
+  // ── Conversion Cost Calculator ─────────────────────────────────────────────
+  const TIER_WEIGHTS = { simple: 0, moderate: 0.33, complex: 0.67, very_complex: 1.0 };
+
+  function calcTierPrice(tier, floor, ceiling) {
+    const w = TIER_WEIGHTS[tier] != null ? TIER_WEIGHTS[tier] : 0.5;
+    return Math.round(floor + (ceiling - floor) * w);
+  }
+
+  function renderCalculator() {
+    const floor   = Math.max(0, parseFloat(document.getElementById('priceFloor').value)   || 0);
+    const ceiling = Math.max(floor, parseFloat(document.getElementById('priceCeiling').value) || 0);
+    const resultsEl = document.getElementById('calcResults');
+    if (!resultsEl) return;
+
+    // Bucket rows by tier
+    const buckets = { simple:[], moderate:[], complex:[], very_complex:[] };
+    rows.forEach(r => {
+      const { tier } = conversionCost(r);
+      if (buckets[tier]) buckets[tier].push(r);
+    });
+
+    let grandTotal = 0;
+    const tierOrder = ['simple','moderate','complex','very_complex'];
+    const tierColors = { simple:'#2e7d32', moderate:'#f57f17', complex:'#c62828', very_complex:'#6a1b9a' };
+
+    let html = '';
+    tierOrder.forEach(tier => {
+      const bucket = buckets[tier];
+      if (!bucket.length) return;
+      const price    = calcTierPrice(tier, floor, ceiling);
+      const subtotal = price * bucket.length;
+      grandTotal    += subtotal;
+      html += `<div class="calc-tier">
+        <div class="t-label" style="color:${tierColors[tier]}">${TIER_LABELS[tier]}</div>
+        <div class="t-count">${bucket.length} form${bucket.length > 1 ? 's' : ''} × ${fmt$(price)}</div>
+        <div class="t-cost">${fmt$(subtotal)}</div>
+      </div>`;
+    });
+
+    // Grand total card
+    const totalForms = rows.length;
+    html += `<div class="calc-total">
+      <div>
+        <div class="t-label">Total Library Conversion</div>
+        <div class="t-note">${totalForms} form${totalForms !== 1 ? 's' : ''} · floor ${fmt$(floor)} → ceiling ${fmt$(ceiling)}</div>
+      </div>
+      <div class="t-range">${fmt$(grandTotal)}</div>
+    </div>`;
+
+    resultsEl.innerHTML = html;
+  }
+
+  // Wire up calculator inputs
+  ['priceFloor','priceCeiling'].forEach(id => {
+    const el2 = document.getElementById(id);
+    if (el2) el2.addEventListener('input', renderCalculator);
+  });
+
+  const init = () => { render(); renderCalculator(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
