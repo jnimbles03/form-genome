@@ -167,6 +167,31 @@ footer a img:hover{opacity:1}
 .duplicate-list{margin:12px 0;padding:12px;background:var(--panel);border:1px solid var(--hair);border-radius:8px;max-height:200px;overflow-y:auto}
 .duplicate-item{padding:6px 0;color:var(--ink);font-size:13px;border-bottom:1px solid var(--hair)}
 .duplicate-item:last-child{border-bottom:none}
+
+/* ── Conversion cost column ──────────────────────────────────────── */
+.cost-cell{font-variant-numeric:tabular-nums;font-weight:600;font-size:11px;text-align:right}
+.cost-tier{display:block;font-size:9px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:1px}
+
+/* ── Library Conversion Cost Calculator ─────────────────────────── */
+#convCalc{display:none;padding:0 20px;margin-bottom:16px}
+.calc-inner{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.calc-top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.calc-top h3{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+.calc-top span{font-size:12px;color:var(--muted)}
+.calc-inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:600px){.calc-inputs{grid-template-columns:1fr}}
+.calc-field-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.price-wrap{display:flex;align-items:center;background:var(--card);border:1px solid var(--hair);border-radius:10px;overflow:hidden;transition:border-color .15s}
+.price-wrap:focus-within{border-color:var(--accent)}
+.price-wrap .pfx{padding:0 6px 0 12px;font-size:14px;font-weight:700;color:var(--accent);user-select:none;flex-shrink:0}
+.price-wrap input{border:0;outline:0;background:transparent;color:var(--ink);font-size:14px;font-weight:600;padding:9px 10px 9px 0;width:100%;font-family:inherit}
+.calc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.calc-card{background:var(--bg);border:1px solid var(--hair);border-radius:10px;padding:11px 13px}
+.calc-card .cc-label{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.calc-card .cc-sub{font-size:11px;color:var(--muted);margin-bottom:5px}
+.calc-card .cc-val{font-size:14px;font-weight:700;color:var(--ink)}
+.calc-card.total{border-color:rgba(118,224,166,.3);background:rgba(118,224,166,.04)}
+.calc-card.total .cc-val{font-size:20px;color:var(--accent);font-family:'Orbitron',system-ui,sans-serif;letter-spacing:-.5px}
 </style>
 <script src="https://unpkg.com/scrollbooster@3/dist/scrollbooster.min.js"></script>
 </head>
@@ -255,6 +280,33 @@ footer a img:hover{opacity:1}
     </div>
   </div>
 
+  <!-- Library Conversion Cost Calculator -->
+  <div class="full-width" id="convCalc">
+    <div class="calc-inner">
+      <div class="calc-top">
+        <h3>Library Conversion Cost</h3>
+        <span>Floor and ceiling per form — interpolated by complexity tier</span>
+      </div>
+      <div class="calc-inputs">
+        <div>
+          <div class="calc-field-label">Floor — simplest form</div>
+          <div class="price-wrap">
+            <span class="pfx">$</span>
+            <input type="number" id="calcFloor" value="1500" min="0" step="500">
+          </div>
+        </div>
+        <div>
+          <div class="calc-field-label">Ceiling — most complex form</div>
+          <div class="price-wrap">
+            <span class="pfx">$</span>
+            <input type="number" id="calcCeiling" value="15000" min="0" step="500">
+          </div>
+        </div>
+      </div>
+      <div class="calc-grid" id="calcBreakdown"></div>
+    </div>
+  </div>
+
   <!-- Table -->
   <div class="full-width">
     <div id="tableWrap" class="table-wrap">
@@ -326,6 +378,7 @@ const COLS = [
   {key:'industry_subvertical',label:'Industry Sub-vertical',type:'text',tooltip:'More specific industry sub-category within the primary vertical'},
   {key:'complexity_score',label:'Complexity Score',type:'databar',tooltip:'Overall operational difficulty score (0-100+) based on notarization, third-party involvement, witnesses, attachments, conditional logic, and field types'},
   {key:'nigo_score',label:'NIGO Score',type:'databar',tooltip:'Not In Good Order risk score - probability of form rejection due to common errors (higher = higher rejection risk). Based on data validation, attachments, notarization, and field complexity'},
+  {key:'conversion_cost',label:'Conv. Cost',type:'cost',tooltip:'Estimated engineering cost to convert this form into a guided wizard experience, based on field count, signatures, conditional logic, and other complexity factors'},
   {key:'genome_rank',label:'Genome Rank',type:'rank',tooltip:'Percentile ranking of form complexity compared to all forms in the dataset'},
   {key:'form_name',label:'Form Title',type:'title',tooltip:'Name or title of the form'},
   {key:'action_type',label:'Action Type',type:'text',tooltip:'Category of form action (e.g., enrollment, application, consent)'},
@@ -375,6 +428,7 @@ let colOrder = [
   'pages',
   'complexity_score',
   'nigo_score',
+  'conversion_cost',
   'signature_analysis.signature_count',
   'attachments_required',
   'notarization_required',
@@ -1011,6 +1065,7 @@ function runAnotherBatch(){
   // Hide table and charts
   get('tableWrap').style.display = 'none';
   get('charts').style.display = 'none';
+  const _cc = get('convCalc'); if(_cc) _cc.style.display = 'none';
 
   // Clear rows
   rows = [];
@@ -1131,6 +1186,7 @@ function clearResultsUI(){
   // Hide table and charts
   get('tableWrap').style.display = 'none';
   get('charts').style.display = 'none';
+  const _cc = get('convCalc'); if(_cc) _cc.style.display = 'none';
 
   // Clear input and log
   get('urlBox').value = '';
@@ -1307,8 +1363,19 @@ async function generateReport(){
 
 function exportCSV(){
   if(!rows.length) return;
-  const headers = colOrder.filter(k => k !== '_select').map(k=>COLS.find(c=>c.key===k)?.label||k);
-  const csv = [headers.join(',')].concat(rows.map(r=> colOrder.filter(k => k !== '_select').map(k=>JSON.stringify(r[k]||'')).join(','))).join('\n');
+  const exportKeys = colOrder.filter(k => k !== '_select' && k !== '_expand');
+  const headers = exportKeys.map(k => COLS.find(c=>c.key===k)?.label || k);
+
+  const csvRows = rows.map(r => exportKeys.map(k => {
+    if(k === 'conversion_cost'){
+      const cv = conversionCost(r);
+      return JSON.stringify(cv.cost);
+    }
+    const v = k.includes('.') ? k.split('.').reduce((o,p)=>o?.[p], r) : r[k];
+    return JSON.stringify(v ?? '');
+  }).join(','));
+
+  const csv = [headers.join(','), ...csvRows].join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1886,6 +1953,64 @@ function actionType(r){
   return 'Disclosure';
 }
 
+/* ===== Conversion Cost Helper ===== */
+const CONV_TIERS = [
+  {max:20,  tier:'simple',       hours:11,  label:'Simple'},
+  {max:45,  tier:'moderate',     hours:28,  label:'Moderate'},
+  {max:70,  tier:'complex',      hours:52,  label:'Complex'},
+  {max:1e9, tier:'very_complex', hours:80,  label:'Very Complex'},
+];
+const TIER_WEIGHTS = {simple:0, moderate:0.33, complex:0.67, very_complex:1.0};
+
+function conversionCost(r){
+  // Use backend-computed data if available (new analyze endpoint)
+  const c = r.conversion;
+  if(c && typeof c.cost_usd === 'number'){
+    return {cost: c.cost_usd, tier: c.tier || 'moderate', hours: c.effort_hours || 0, label: CONV_TIERS.find(t=>t.tier===c.tier)?.label || 'Moderate'};
+  }
+  // Fallback: derive from complexity_score
+  const score = r.complexity_score || 0;
+  const t = CONV_TIERS.find(x => score <= x.max) || CONV_TIERS[3];
+  return {cost: t.hours * 150, tier: t.tier, hours: t.hours, label: t.label};
+}
+
+function fmt$(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+
+/* ===== Conversion Cost Calculator ===== */
+function renderCalculator(){
+  const el = document.getElementById('calcBreakdown');
+  if(!el || !rows.length) return;
+  const floor   = Math.max(0, parseFloat(document.getElementById('calcFloor')?.value) || 0);
+  const ceiling = Math.max(floor, parseFloat(document.getElementById('calcCeiling')?.value) || 0);
+
+  // Bucket rows by tier
+  const buckets = {simple:[],moderate:[],complex:[],very_complex:[]};
+  rows.forEach(r => { const {tier} = conversionCost(r); if(buckets[tier]) buckets[tier].push(r); });
+
+  let grand = 0;
+  let html = '';
+  ['simple','moderate','complex','very_complex'].forEach(tier => {
+    const bucket = buckets[tier];
+    if(!bucket.length) return;
+    const w = TIER_WEIGHTS[tier] ?? 0.5;
+    const price = Math.round(floor + (ceiling - floor) * w);
+    const sub = price * bucket.length;
+    grand += sub;
+    const label = CONV_TIERS.find(t=>t.tier===tier)?.label || tier;
+    html += `<div class="calc-card">
+      <div class="cc-label">${label}</div>
+      <div class="cc-sub">${bucket.length} form${bucket.length>1?'s':''} × ${fmt$(price)}</div>
+      <div class="cc-val">${fmt$(sub)}</div>
+    </div>`;
+  });
+  html += `<div class="calc-card total">
+    <div class="cc-label">Total</div>
+    <div class="cc-sub">${rows.length} forms · ${fmt$(floor)}–${fmt$(ceiling)}</div>
+    <div class="cc-val">${fmt$(grand)}</div>
+  </div>`;
+  el.innerHTML = html;
+}
+
 function renderRows(data){
   rows = data.map(r => {
     if(!r.action_type) r.action_type = actionType(r);
@@ -1960,6 +2085,11 @@ function renderRows(data){
         const v = getNestedValue(r, key);
         td.className = 'num';
         td.textContent = (v == null || v === '') ? '—' : v;
+
+      } else if(spec.type === 'cost'){
+        const cv = conversionCost(r);
+        td.className = 'cost-cell';
+        td.innerHTML = `${fmt$(cv.cost)}<span class="cost-tier">${cv.label}</span>`;
 
       } else if(spec.type === 'currency'){
         const v = getNestedValue(r, key);
@@ -2188,11 +2318,22 @@ function dist(rows, attr){
 
 function updateDonuts(data){
   const charts = get('charts');
+  const calc   = get('convCalc');
   if(!data || !data.length){
     if(charts) charts.style.display = 'none';
+    if(calc)   calc.style.display   = 'none';
     return;
   }
   if(charts) charts.style.display = 'grid';
+  if(calc){
+    calc.style.display = 'block';
+    renderCalculator();
+    // Wire inputs once (idempotent — re-attaching is harmless but guard anyway)
+    ['calcFloor','calcCeiling'].forEach(id => {
+      const inp = get(id);
+      if(inp && !inp.dataset.wired){ inp.addEventListener('input', renderCalculator); inp.dataset.wired='1'; }
+    });
+  }
 
   console.log('[DONUTS] Updating donuts with', data.length, 'records');
 
@@ -2304,6 +2445,7 @@ async function init(){
   get('logBox').innerHTML = '';
   get('tableWrap').style.display = 'none';
   get('charts').style.display = 'none';
+  const _cc = get('convCalc'); if(_cc) _cc.style.display = 'none';
   get('foundCount').textContent = '0';
   get('tbody').innerHTML = '';
   rows = [];
