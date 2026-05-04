@@ -2,7 +2,7 @@
 # Enhanced error logging for debugging LLM issues
 from __future__ import annotations
 import os, requests, json, time
-from typing import List, Dict
+from typing import Any, List, Dict
 
 class LLMError(RuntimeError): ...
 def _raise(res: requests.Response) -> None:
@@ -39,11 +39,54 @@ def _as_anthropic(messages: List[Dict[str,str]]) -> Dict:
     return {"system": system, "messages": msgs}
 
 def _as_gemini(messages: List[Dict[str,str]]) -> Dict:
-    # Gemini generateContent: contents:[{role, parts:[{text}]}]
+    """Convert OpenAI/Anthropic-shaped messages to Gemini generateContent.
+
+    Supports two content shapes:
+      - String content (text only):  {"role": "...", "content": "hello"}
+      - List content (multimodal):   {"role": "...", "content": [
+            {"type": "text", "text": "..."},
+            {"type": "image", "source": {"type": "base64",
+                                          "media_type": "image/png",
+                                          "data": "..."}},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}},
+        ]}
+
+    Anthropic and OpenAI image blocks are normalised to Gemini's
+    `inline_data: {mime_type, data}` part.
+    """
     contents = []
     for m in messages:
         role = "user" if m.get("role") in ("system","user") else "model"
-        contents.append({"role": role, "parts":[{"text": m.get("content","")}]})
+        content = m.get("content", "")
+
+        if isinstance(content, list):
+            parts: List[Dict[str, Any]] = []
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                btype = block.get("type")
+                if btype == "text":
+                    parts.append({"text": block.get("text","")})
+                elif btype == "image":
+                    # Anthropic-shaped: source.{type:base64, media_type, data}
+                    src = block.get("source") or {}
+                    if src.get("type") == "base64":
+                        parts.append({"inline_data": {
+                            "mime_type": src.get("media_type", "image/png"),
+                            "data": src.get("data", ""),
+                        }})
+                elif btype == "image_url":
+                    # OpenAI-shaped: image_url.url = "data:<mime>;base64,<data>"
+                    url = (block.get("image_url") or {}).get("url", "")
+                    if url.startswith("data:") and ";base64," in url:
+                        head, b64 = url.split(";base64,", 1)
+                        mime = head[5:]  # strip "data:"
+                        parts.append({"inline_data": {"mime_type": mime, "data": b64}})
+            if parts:
+                contents.append({"role": role, "parts": parts})
+        else:
+            contents.append({"role": role, "parts": [{"text": str(content)}]})
+
     return {"contents": contents}
 
 def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_tokens:int=800, temperature:float=0.0, timeout:float=25.0, retries:int=2, fallback:bool=True) -> str:
@@ -138,7 +181,10 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
                 elif current_provider == "gemini":
                     key = os.getenv("GEMINI_API_KEY","").strip()
                     if not key: raise LLMError("GEMINI_API_KEY missing")
-                    mdl = (model or "gemini-1.5-pro").strip()
+                    # Default to Flash — used as a scout for triage/discovery
+                    # AND as a vision model for scanned PDFs. Pro is reserved
+                    # for explicit overrides (set GEMINI_MODEL or pass model=).
+                    mdl = (model or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash").strip()
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={key}"
                     payload = _as_gemini(messages)
                     payload["generationConfig"] = {"temperature": temperature, "maxOutputTokens": max_tokens}

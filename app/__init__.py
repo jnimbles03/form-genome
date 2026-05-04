@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import atexit
+import hmac
 import logging
 from functools import wraps
 from flask import Flask, send_from_directory, request, Response, jsonify
@@ -88,20 +89,30 @@ def create_app() -> Flask:
     app.extensions['limiter'] = limiter
 
     # --- Security: CORS ---
+    # Headers the Chrome extension and dashboard send. X-API-Key allows the
+    # extension to authenticate with a shared secret; X-Extension-* are
+    # informational identity headers from the extension client.
+    _ALLOWED_HEADERS = [
+        "Content-Type", "Authorization", "X-API-Key",
+        "X-Extension-Id", "X-User-Id", "X-Extension-Version",
+    ]
     cors_origins = os.getenv("CORS_ORIGINS", "").strip()
     if cors_origins:
         # Production: restrict to specific domains
         origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
+        # Always allow chrome-extension:// origins so the popup can call us.
+        origins.append("chrome-extension://*")
         CORS(app, resources={
             r"/api/*": {
                 "origins": origins,
                 "methods": ["GET", "POST", "DELETE"],
+                "allow_headers": _ALLOWED_HEADERS,
                 "max_age": 3600
             }
         })
     else:
         # Development: allow all origins
-        CORS(app)
+        CORS(app, resources={r"/api/*": {"allow_headers": _ALLOWED_HEADERS}})
 
     # --- Security: HTTP Basic Auth for /admin ---
     def check_auth(username: str, password: str) -> bool:
@@ -179,6 +190,18 @@ def create_app() -> Flask:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer ") and len(auth_header) > 32:
             return None
+        # (3) Chrome extension shared-secret API key.
+        # Set the EXTENSION_API_KEY env var on Cloud Run; the extension
+        # bakes the same value into its build and sends it as X-API-Key.
+        # This is intentionally a low-bar gate (anyone who unpacks the .crx
+        # can extract it) — sufficient for internal/dogfood use until full
+        # OAuth lands. Compare in constant time to be safe.
+        ext_key_expected = (os.getenv("EXTENSION_API_KEY") or "").strip()
+        if ext_key_expected:
+            ext_key_got = (request.headers.get("X-API-Key") or "").strip()
+            if ext_key_got and len(ext_key_got) == len(ext_key_expected) \
+                    and hmac.compare_digest(ext_key_got, ext_key_expected):
+                return None
         return jsonify({"ok": False, "error": "authentication required"}), 401
 
     app.before_request(_api_auth_gate)

@@ -170,10 +170,13 @@ def _build_vision_messages(image_data_list: List[str], provider: str = "anthropi
 
     Args:
         image_data_list: List of base64-encoded image strings
-        provider: LLM provider (anthropic or openai)
+        provider: LLM provider (anthropic, openai, or gemini)
 
     Returns:
-        Messages list in provider-specific format
+        Messages list in provider-specific format. For gemini we emit the
+        Anthropic-style {type:image, source:{type:base64,...}} block — the
+        llm_router.`_as_gemini` adapter normalises that into Gemini's
+        `inline_data` format.
     """
     # Build content with all images + prompt
     content = []
@@ -189,7 +192,8 @@ def _build_vision_messages(image_data_list: List[str], provider: str = "anthropi
                 }
             })
         else:
-            # Anthropic format: image with base64 source
+            # Anthropic + Gemini: both accept the {type:image, source:base64}
+            # shape; llm_router._as_gemini converts to inline_data on send.
             content.append({
                 "type": "image",
                 "source": {
@@ -279,16 +283,22 @@ def analyze_flat_pdf_with_vision(
 
     # Get config
     max_pages = int(os.getenv("VISION_MAX_PAGES", "3"))
-    provider = provider or os.getenv("LLM_PROVIDER", "anthropic")
+    # Default vision provider is Gemini Flash — fast, cheap, multimodal.
+    # Set VISION_PROVIDER=anthropic|openai|gemini to override; falls back to
+    # LLM_PROVIDER, then 'gemini'.
+    provider = provider or os.getenv("VISION_PROVIDER") or os.getenv("LLM_PROVIDER") or "gemini"
 
     # Select vision-capable model based on provider
     if not model:
         if provider == "openai":
-            model = os.getenv("OPENAI_MODEL", "gpt-4o")  # Vision-capable OpenAI model
+            model = os.getenv("OPENAI_VISION_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-4o"
         elif provider == "anthropic":
-            model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")  # Vision-capable Claude model
+            model = os.getenv("ANTHROPIC_VISION_MODEL") or os.getenv("ANTHROPIC_MODEL") or "claude-3-5-sonnet-20241022"
+        elif provider == "gemini":
+            # Gemini Flash is multimodal and ~10x cheaper than Pro for this task.
+            model = os.getenv("GEMINI_VISION_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
         else:
-            model = "claude-3-5-sonnet-20241022"  # Default fallback
+            model = "gemini-1.5-flash"  # Safe default
 
     try:
         logger.info(f"Starting vision analysis for PDF from {source_url}")
