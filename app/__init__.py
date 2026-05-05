@@ -100,8 +100,10 @@ def create_app() -> Flask:
     if cors_origins:
         # Production: restrict to specific domains
         origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
-        # Always allow chrome-extension:// origins so the popup can call us.
+        # Always allow extension origins so the popup can call us
+        # (chrome-extension:// for Chrome/Edge, moz-extension:// for Firefox).
         origins.append("chrome-extension://*")
+        origins.append("moz-extension://*")
         CORS(app, resources={
             r"/api/*": {
                 "origins": origins,
