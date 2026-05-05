@@ -201,11 +201,11 @@ def discover(seed: str, seed_html: str, sitemap_urls: List[str],
              os.getenv("OPENAI_MODEL") if prov == "openai" else
              os.getenv("ANTHROPIC_MODEL") if prov == "anthropic" else
              os.getenv("GEMINI_MODEL") if prov == "gemini" else 
-             "gemini-1.5-flash")).strip()
+             "gemini-2.0-flash")).strip()
     
     # Ensure Gemini Flash is used if provider is gemini and no model specified
     if prov == "gemini" and not mdl:
-        mdl = "gemini-1.5-flash"
+        mdl = "gemini-2.0-flash"
 
     # Asset hints from seed HTML (pre-LLM)
     asset_hints = extract_pdf_hints(seed_html, seed)

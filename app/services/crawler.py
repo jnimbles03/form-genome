@@ -600,7 +600,7 @@ Return JSON only:
         
         # User Request: Use Gemini Flash for site index/directory analysis
         provider = "gemini"
-        model = os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+        model = os.getenv("GEMINI_MODEL") or "gemini-2.0-flash"
         
         prompt_messages = [{"role": "user", "content": prompt}]
         

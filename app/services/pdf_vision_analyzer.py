@@ -296,9 +296,9 @@ def analyze_flat_pdf_with_vision(
             model = os.getenv("ANTHROPIC_VISION_MODEL") or os.getenv("ANTHROPIC_MODEL") or "claude-3-5-sonnet-20241022"
         elif provider == "gemini":
             # Gemini Flash is multimodal and ~10x cheaper than Pro for this task.
-            model = os.getenv("GEMINI_VISION_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash"
+            model = os.getenv("GEMINI_VISION_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-2.0-flash"
         else:
-            model = "gemini-1.5-flash"  # Safe default
+            model = "gemini-2.0-flash"  # Safe default
 
     try:
         logger.info(f"Starting vision analysis for PDF from {source_url}")

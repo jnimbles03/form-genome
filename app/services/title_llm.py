@@ -128,7 +128,7 @@ def make_title(url: str, first_page_text: str) -> tuple[str, str]:
     elif provider == "xai":
         model = (os.getenv("GROK_MODEL") or "grok-beta").strip()
     elif provider == "gemini":
-        model = (os.getenv("GEMINI_MODEL") or "gemini-1.5-flash").strip()
+        model = (os.getenv("GEMINI_MODEL") or "gemini-2.0-flash").strip()
     else:
         model = "gpt-4o-mini"  # Default fallback
 

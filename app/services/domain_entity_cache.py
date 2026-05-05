@@ -139,9 +139,13 @@ Domain: {domain}
             {"role": "user", "content": prompt}
         ]
 
+        # Don't pass an explicit model: chat_complete picks the right default
+        # for whatever provider LLM_PROVIDER resolves to (and per-provider
+        # defaults on fallback). Hard-coding OPENAI_MODEL here was breaking
+        # Gemini calls by sending 'gpt-4o-mini' to the Gemini endpoint.
         response = chat_complete(
             provider=os.getenv("LLM_PROVIDER", "openai"),
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            model="",
             messages=messages,
             max_tokens=100,
             temperature=0.3  # Low temperature for consistent naming

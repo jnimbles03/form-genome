@@ -109,6 +109,13 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
 
     last_err = None
     for current_provider in providers_to_try:
+        # IMPORTANT: only honour the caller's `model` override for the
+        # ORIGINALLY-requested provider. Once we fall through to a different
+        # provider, drop the model so each provider picks its own default —
+        # otherwise we end up sending things like 'gpt-4o-mini' to Gemini
+        # or 'gemini-2.0-flash' to Anthropic, which all 404.
+        effective_model = model if current_provider == provider else None
+
         for attempt in range(retries+1):
             try:
                 # Use current_provider for this attempt
@@ -116,7 +123,7 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
                     key = os.getenv("XAI_API_KEY","").strip()
                     url = os.getenv("XAI_ENDPOINT","https://api.x.ai/v1/chat/completions").strip()
                     if not key: raise LLMError("XAI_API_KEY missing")
-                    payload = {"model": model or os.getenv("GROK_MODEL","grok-4-latest"),
+                    payload = {"model": effective_model or os.getenv("GROK_MODEL","grok-4-latest"),
                                "temperature": temperature, "max_tokens": max_tokens,
                                "messages": _as_openai(messages)}
                     headers = {"Authorization": f"Bearer {key}", "Content-Type":"application/json"}
@@ -128,7 +135,7 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
                 elif current_provider == "openai":
                     key = os.getenv("OPENAI_API_KEY","").strip()
                     if not key: raise LLMError("OPENAI_API_KEY missing")
-                    payload = {"model": model or "gpt-4o-mini",
+                    payload = {"model": effective_model or os.getenv("OPENAI_MODEL") or "gpt-4o-mini",
                                "temperature": temperature, "max_tokens": max_tokens,
                                "messages": _as_openai(messages)}
                     headers = {"Authorization": f"Bearer {key}", "Content-Type":"application/json"}
@@ -155,11 +162,12 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
                         if is_vision:
                             break
 
+                    default_anthropic = os.getenv("ANTHROPIC_MODEL") or "claude-3-5-sonnet-20241022"
                     # Auto-select vision model if needed
-                    if is_vision and not model:
+                    if is_vision and not effective_model:
                         payload["model"] = "claude-3-5-sonnet-20241022"  # Vision-capable model
                     else:
-                        payload["model"] = model or "claude-3-5-sonnet-20241022"
+                        payload["model"] = effective_model or default_anthropic
 
                     payload["max_tokens"] = max_tokens
                     payload["temperature"] = temperature
@@ -182,9 +190,11 @@ def chat_complete(*, provider:str, model:str, messages:List[Dict[str,str]], max_
                     key = os.getenv("GEMINI_API_KEY","").strip()
                     if not key: raise LLMError("GEMINI_API_KEY missing")
                     # Default to Flash — used as a scout for triage/discovery
-                    # AND as a vision model for scanned PDFs. Pro is reserved
-                    # for explicit overrides (set GEMINI_MODEL or pass model=).
-                    mdl = (model or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash").strip()
+                    # AND as a vision model for scanned PDFs. gemini-1.5-flash
+                    # was retired by Google; use 2.x. Override via GEMINI_MODEL
+                    # or by passing model= when the caller's primary provider
+                    # is gemini.
+                    mdl = (effective_model or os.getenv("GEMINI_MODEL") or "gemini-2.0-flash").strip()
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={key}"
                     payload = _as_gemini(messages)
                     payload["generationConfig"] = {"temperature": temperature, "maxOutputTokens": max_tokens}
