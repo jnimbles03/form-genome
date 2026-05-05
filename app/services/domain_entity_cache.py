@@ -26,8 +26,10 @@ from app.services.llm_router import chat_complete, LLMError
 CACHE_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = CACHE_DIR / "domain_entity_cache.json"
 
-# Thread-safe cache access
-_cache_lock = threading.Lock()
+# Thread-safe cache access. RLock (reentrant) because cache_entity()
+# acquires the lock then calls load_cache() which also acquires the same
+# lock — non-reentrant Lock() deadlocks the analyzer on every cache miss.
+_cache_lock = threading.RLock()
 _cache: Dict[str, Dict[str, Any]] = {}
 _cache_loaded = False
 
