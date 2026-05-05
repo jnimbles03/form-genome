@@ -2269,16 +2269,51 @@ def analyze_pdf(
         vision_already_ran = False  # Gate to prevent the safety-check branch from re-firing vision
         text_len = len(text or "")
         field_count = widgets.get("field_count", 0)
+        widget_sig_count = int(widgets.get("signature_count", 0) or 0)
         threshold = int(os.getenv("VISION_TRIGGER_THRESHOLD", "100"))
 
         # Detect flat PDFs: minimal text AND no extractable fields
         is_flat_pdf = (text_len < threshold) and (field_count == 0)
 
-        # Skip vision if requested (for fast re-analysis)
-        if is_flat_pdf and not skip_vision:
+        # Even non-flat PDFs benefit from vision when the heuristics know the
+        # form REQUIRES action but can't COUNT the action items, e.g.:
+        #   - "Signature Required" inferred from text but 0 AcroForm sig widgets
+        #     (forms designed to be printed and wet-signed)
+        #   - Attachments required by text pattern but no structured count
+        # Vision is the only way to count what humans actually see on the page.
+        # Gated by VISION_AMBIGUOUS_TRIGGER (default on); set to "false" to
+        # disable the extra calls and revert to flat-only behaviour.
+        ambiguous_trigger_on = os.getenv("VISION_AMBIGUOUS_TRIGGER", "true").lower() in ("true", "1", "yes")
+        sig_required_text = bool(
+            flags.get("signature_words")
+            or flags.get("notarization_required")
+            or flags.get("witness_text")
+        )
+        needs_vision_for_counts = (
+            ambiguous_trigger_on
+            and field_count > 0  # not flat (flat is handled above)
+            and (
+                # Form text says signing is required but AcroForm has no sig widget
+                (sig_required_text and widget_sig_count == 0)
+                # Or attachments are required and we can't count them yet
+                or flags.get("attachments_required")
+            )
+        )
+
+        should_run_vision = (is_flat_pdf or needs_vision_for_counts) and not skip_vision
+
+        if should_run_vision:
             try:
                 import logging
-                logging.info(f"[VISION] Detected flat PDF: text_len={text_len}, fields={field_count}, url={src_url}")
+                trigger_reason = (
+                    "flat_pdf" if is_flat_pdf
+                    else ("ambiguous_signatures" if (sig_required_text and widget_sig_count == 0)
+                          else "attachments_required")
+                )
+                logging.info(
+                    f"[VISION] Triggered ({trigger_reason}): text_len={text_len}, "
+                    f"fields={field_count}, widget_sigs={widget_sig_count}, url={src_url}"
+                )
                 vision_data = analyze_flat_pdf_with_vision(
                     pdf_bytes=content,
                     source_url=src_url or ""
