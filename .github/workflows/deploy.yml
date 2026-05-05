@@ -89,7 +89,7 @@ jobs:
             --timeout 300 \
             --max-instances 10 \
             --allow-unauthenticated \
-            --set-env-vars "CLOUD_SQL_CONNECTION_NAME=formgenome:us-central1:formgenome-db,DB_NAME=postgres,DB_USER=postgres,FLASK_ENV=production" \
+            --update-env-vars "CLOUD_SQL_CONNECTION_NAME=formgenome:us-central1:formgenome-db,DB_NAME=postgres,DB_USER=postgres,FLASK_ENV=production" \
             --set-secrets "DB_PASSWORD=formgenome-db-password:latest,ADMIN_PIN=admin-pin:latest,SECRET_KEY=flask-secret-key:latest,OPENAI_API_KEY=openai-api-key:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest,GOOGLE_CLIENT_ID=google-oauth-client-id:latest,GOOGLE_CLIENT_SECRET=google-oauth-client-secret:latest" \
             --add-cloudsql-instances formgenome:us-central1:formgenome-db
 
