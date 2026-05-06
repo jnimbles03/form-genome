@@ -2583,6 +2583,11 @@ def analyze_pdf(
             "checkboxes": widgets.get("checkboxes", 0),
             "dropdowns": widgets.get("dropdowns", 0),
             "signature_analysis": widgets,
+            # Promote nested counts to top-level so the dashboard's
+            # generic column reads them without unwrapping signature_analysis.
+            # Vision can later overwrite signature_analysis.signature_count
+            # via merge_vision_results_into_record(); we re-sync at end.
+            "signature_count": int(widgets.get("signature_count", 0) or 0),
 
             "notarization_required": flags["notarization_required"],
             "attachments_required": flags["attachments_required"],
@@ -2627,6 +2632,19 @@ def analyze_pdf(
             for key in ["attachment_list", "attachment_count", "id_verification_type", "conditional_logic_details"]:
                 if key in vision_data:
                     base_record[key] = vision_data[key]
+
+            # Vision may have detected sigs the AcroForm widgets missed
+            # (printed-and-signed forms). Promote the higher count to
+            # both signature_analysis and the top-level signature_count
+            # so the dashboard renders a useful number.
+            vision_sig_count = int(vision_data.get("signature_count", 0) or 0)
+            if vision_sig_count > 0:
+                widgets["signature_count"] = max(
+                    int(widgets.get("signature_count", 0) or 0),
+                    vision_sig_count,
+                )
+                base_record["signature_count"] = widgets["signature_count"]
+                base_record["signature_analysis"] = widgets
 
         # Apply domain-based metadata using crawl root domain if available
         # This ensures PDFs hosted on CDNs (like HubSpot) get entity names from the org's actual domain

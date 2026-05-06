@@ -183,7 +183,14 @@ def list_records():
         "payment_amount", "value_type", "form_value",
         "root_domain", "region", "same_domain", "llm_suggested_entity", "metadata_source",
         "hosting_entity", "form_owner_entity", "is_intermediary_model", "intermediary_type",
-        "business_impact", "timestamp", "ts"
+        "business_impact", "timestamp", "ts",
+        # Vision-derived counts and flags. Without these, the dashboard
+        # reads `null` for sig_count / att_count even though the records
+        # are fully analyzed in the DB. signature_analysis is the dict
+        # that holds the per-widget breakdown including signature_count.
+        "signature_analysis", "vision_analyzed", "attachment_count",
+        "attachment_list", "form_purpose", "confidence_tier",
+        "conversion",
     }
 
     optimized_rows = [
