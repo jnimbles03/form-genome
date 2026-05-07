@@ -70,6 +70,22 @@ HEADERS = {
     "Connection": "close",
 }
 
+# Browser-impersonating UA used as a fallback when a CDN blocks our honest
+# bot UA with 401/403. Justified for /api/analyze_pdf because the request
+# is user-initiated (the user clicked a specific PDF in the extension);
+# this is not a crawl. We still try the honest UA first.
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36"
+)
+_BROWSER_HEADERS = {
+    "User-Agent": _BROWSER_UA,
+    "Accept": "application/pdf,application/octet-stream;q=0.9,text/html,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "close",
+}
+
 def _normalize_url(url: str) -> str:
     if not url:
         return url
@@ -130,10 +146,17 @@ def _safe_get(url: str, timeout: int = 25, max_mb: int = 120) -> bytes:
     # impersonation defaults.
     headers = dict(HEADERS)
 
-    # 1) HEAD (best effort) to detect 4xx and huge files fast
+    # 1) HEAD (best effort) to detect 4xx and huge files fast.
+    # If we hit 401/403, the CDN is bot-blocking our honest UA. Re-try
+    # with a browser UA before giving up — this analyzer call is
+    # user-initiated, not a crawl, so the impersonation is justified
+    # for the explicit user-clicked-this PDF.
+    blocked = False
     try:
         hr = s.head(url, headers=headers, allow_redirects=True, timeout=timeout, verify=verify)
-        if 400 <= hr.status_code < 500:
+        if hr.status_code in (401, 403):
+            blocked = True
+        elif 400 <= hr.status_code < 500:
             raise requests.HTTPError(f"{hr.status_code} Client Error: {hr.reason} for url: {url}")
         clen = hr.headers.get("Content-Length")
         if clen and int(clen) > max_bytes:
@@ -142,6 +165,9 @@ def _safe_get(url: str, timeout: int = 25, max_mb: int = 120) -> bytes:
         raise
     except Exception:
         pass
+
+    if blocked:
+        headers = dict(_BROWSER_HEADERS)
 
     # 2) GET streamed, with early PDF detection using CT or %PDF- magic
     try:
@@ -178,6 +204,12 @@ def _safe_get(url: str, timeout: int = 25, max_mb: int = 120) -> bytes:
                 raise ValueError(f"Not a PDF (content-type={ct or 'unknown'})")
             return data
     except Exception as e:
+        # If the streamed GET failed with 401/403, retry once with a
+        # browser UA before giving up.
+        if isinstance(e, requests.HTTPError) and getattr(e, 'response', None) is not None \
+                and e.response.status_code in (401, 403) \
+                and headers.get("User-Agent") != _BROWSER_UA:
+            headers = dict(_BROWSER_HEADERS)
         with s.get(url, headers=headers, stream=False, timeout=timeout, allow_redirects=True, verify=verify) as r:
             r.raise_for_status()
             data = r.content or b""
