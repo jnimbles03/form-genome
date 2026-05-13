@@ -86,18 +86,20 @@ def _do_crawl(job_id: str, root_url: str, max_pages: int, depth: int,
                                    "pdfs": pdfs, "url": url[:300]}},
         )
 
-    result = crawler.crawl_site(
-        url=root_url,
-        max_pdfs=None,
-        same_domain=same_domain,
-        allow_offsite=False,
-        depth=depth,
-        max_pages=max_pages,
-        progress_cb=cb,
-        deadline_sec=600.0,
-    )
-    urls = [u.strip() for u in (result.get("pdfs") or result.get("urls") or []) if u]
+    # crawl_auto() is the "It Just Works" entry point — it picks the
+    # right strategy (HTML / Playwright / Google CSE / LLM-assisted) per
+    # site, including JS-rendered pages. crawl_site() falls flat on
+    # JavaScript-driven listings like bank/insurer form portals.
+    result = crawler.crawl_auto(url=root_url, progress_cb=cb)
+    urls = [u.strip() for u in (result.get("urls") or result.get("pdfs") or []) if u]
     urls = list(dict.fromkeys(urls))
+
+    # Respect the max_pages-style cap as a cap on results (the crawler's
+    # smart defaults already throttle pages internally).
+    if max_pages and len(urls) > max_pages * 10:
+        logger.info("[CRAWL_AND_ANALYZE] %s: trimming %d→%d URLs to fit budget",
+                    job_id, len(urls), max_pages * 10)
+        urls = urls[: max_pages * 10]
 
     jobs_store.update_job(
         job_id,
