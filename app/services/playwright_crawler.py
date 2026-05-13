@@ -46,6 +46,9 @@ def crawl_with_playwright(
 
     started = time.time()
     pdfs: list[str] = []
+    unique_pdfs: list[str] = []   # initialized here so the return dict at the
+                                  # bottom doesn't reference an unbound name
+                                  # when sync_playwright() raises mid-flight
     error: str | None = None
 
     try:
