@@ -92,7 +92,41 @@ def _do_crawl(job_id: str, root_url: str, max_pages: int, depth: int,
     # JavaScript-driven listings like bank/insurer form portals.
     result = crawler.crawl_auto(url=root_url, progress_cb=cb)
     urls = [u.strip() for u in (result.get("urls") or result.get("pdfs") or []) if u]
+
+    # Diagnostic: capture what the crawler actually did. This helps debug
+    # "0 PDFs found" — was it the HTML strategy giving up, did Playwright
+    # fire, etc. The values are surfaced in /api/crawl_and_analyze/<id>.
+    crawl_meta = {
+        "source": result.get("source") or "?",
+        "reason": result.get("reason") or "?",
+        "ms": int(result.get("ms") or 0),
+        "raw_count": len(urls),
+    }
+    logger.info("[CRAWL_AND_ANALYZE] %s: crawl_auto → %s", job_id, crawl_meta)
+
+    # If HTML strategy returned nothing, force a Playwright re-try. This
+    # is a safety net for sites whose JS-detection heuristic missed.
+    if not urls and crawler._HAS_PLAYWRIGHT:  # type: ignore[attr-defined]
+        try:
+            from app.services import playwright_crawler
+            logger.info("[CRAWL_AND_ANALYZE] %s: HTML found 0, forcing Playwright", job_id)
+            pw = playwright_crawler.crawl_with_playwright(
+                url=root_url, wait_time=3.0, timeout=60000, max_pdfs=None,
+            )
+            urls = [u.strip() for u in (pw.get("urls") or pw.get("pdfs") or []) if u]
+            crawl_meta["playwright_fallback"] = True
+            crawl_meta["playwright_count"] = len(urls)
+            logger.info("[CRAWL_AND_ANALYZE] %s: Playwright → %d URLs",
+                        job_id, len(urls))
+        except Exception as e:
+            logger.warning("[CRAWL_AND_ANALYZE] %s: Playwright fallback failed: %s",
+                           job_id, e)
+            crawl_meta["playwright_error"] = str(e)[:200]
+
     urls = list(dict.fromkeys(urls))
+
+    # Stash diagnostics on the job for visibility
+    jobs_store.update_job(job_id, state_patch={"crawl_meta": crawl_meta})
 
     # Respect the max_pages-style cap as a cap on results (the crawler's
     # smart defaults already throttle pages internally).
