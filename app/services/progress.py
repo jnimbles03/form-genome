@@ -7,7 +7,10 @@ from typing import Dict, Any
 _LOCK = threading.Lock()
 _STATE: Dict[str, Any] = {
     "crawl":   {"done": 0, "total": 0, "queue": 0, "pdfs": 0, "url": "", "ts": 0},
+    "triage":  {"done": 0, "total": 0, "kept": 0, "dropped": 0, "ts": 0},
     "analyze": {"done": 0, "total": 0, "ts": 0},
+    "dashboard": {"ready": False, "url": "", "ts": 0},
+    "job_id": "",
     "since": 0,
     "status": "idle",
     "message": "",
@@ -20,11 +23,47 @@ def _now() -> int:
 def reset() -> None:
     with _LOCK:
         _STATE["crawl"]   = {"done": 0, "total": 0, "queue": 0, "pdfs": 0, "url": "", "ts": _now()}
+        _STATE["triage"]  = {"done": 0, "total": 0, "kept": 0, "dropped": 0, "ts": _now()}
         _STATE["analyze"] = {"done": 0, "total": 0, "ts": _now()}
+        _STATE["dashboard"] = {"ready": False, "url": "", "ts": _now()}
+        _STATE["job_id"]  = ""
         _STATE["since"]   = _now()
         _STATE["status"]  = "idle"
         _STATE["message"] = ""
         _STATE["stop_requested"] = False
+
+
+def set_job_id(job_id: str) -> None:
+    with _LOCK:
+        _STATE["job_id"] = str(job_id)
+
+
+def update_triage(*, done: int | None = None,
+                  total: int | None = None,
+                  kept: int | None = None,
+                  dropped: int | None = None) -> None:
+    with _LOCK:
+        t = _STATE["triage"]
+        if done    is not None: t["done"]    = int(done)
+        if total   is not None: t["total"]   = int(total)
+        if kept    is not None: t["kept"]    = int(kept)
+        if dropped is not None: t["dropped"] = int(dropped)
+        t["ts"] = _now()
+        _STATE["status"]  = "triaging"
+        _STATE["message"] = f"Triaging {t['done']}/{t['total']} (kept {t['kept']}, dropped {t['dropped']})"
+
+
+def finish_triage() -> None:
+    with _LOCK:
+        _STATE["status"] = "triage_done"
+        _STATE["triage"]["ts"] = _now()
+
+
+def set_dashboard_ready(url: str) -> None:
+    with _LOCK:
+        _STATE["dashboard"] = {"ready": True, "url": str(url), "ts": _now()}
+        _STATE["status"]  = "done"
+        _STATE["message"] = "Dashboard ready"
 
 def start_crawl(seed_url: str) -> None:
     with _LOCK:

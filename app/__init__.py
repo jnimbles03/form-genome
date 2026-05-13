@@ -253,6 +253,10 @@ def create_app() -> Flask:
     from .api.batch_reanalyze import bp as batch_reanalyze_bp
     safe_register(batch_reanalyze_bp, url_prefix="/api")
 
+    # End-to-end pipeline: crawl → triage → analyze → dashboard
+    from .api.crawl_and_analyze import bp as crawl_and_analyze_bp
+    safe_register(crawl_and_analyze_bp, url_prefix="/api")
+
     # Debug printout of registered blueprints
     print(f"\n[DEBUG] Registered blueprints: {list(app.blueprints.keys())}\n")
         # --- UI pages ---
