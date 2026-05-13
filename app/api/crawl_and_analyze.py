@@ -86,46 +86,49 @@ def _do_crawl(job_id: str, root_url: str, max_pages: int, depth: int,
                                    "pdfs": pdfs, "url": url[:300]}},
         )
 
-    # crawl_auto() is the "It Just Works" entry point — it picks the
-    # right strategy (HTML / Playwright / Google CSE / LLM-assisted) per
-    # site, including JS-rendered pages. crawl_site() falls flat on
-    # JavaScript-driven listings like bank/insurer form portals.
-    result = crawler.crawl_auto(url=root_url, progress_cb=cb)
-    urls = [u.strip() for u in (result.get("urls") or result.get("pdfs") or []) if u]
+    # Discovery: combine multiple strategies to find every PDF.
+    #   1. Google CSE (`site:domain filetype:pdf`) — fastest, indexes the
+    #      whole site without crawling. Best when CSE env vars are set.
+    #   2. crawl_auto (HTML + Playwright + LLM hints) — for anything CSE
+    #      missed or for sites Google doesn't index.
+    # We union both sources and dedupe.
+    from urllib.parse import urlsplit
+    domain = (urlsplit(root_url).hostname or "").replace("www.", "")
 
-    # Diagnostic: capture what the crawler actually did. This helps debug
-    # "0 PDFs found" — was it the HTML strategy giving up, did Playwright
-    # fire, etc. The values are surfaced in /api/crawl_and_analyze/<id>.
+    cse_urls: list[str] = []
+    crawl_urls: list[str] = []
+
+    # Stage 1 — Google CSE (cheap and exhaustive when configured)
+    try:
+        cse_urls = list(crawler._google_cse_exhaustive(domain, timeout=10.0))
+        logger.info("[CRAWL_AND_ANALYZE] %s: CSE → %d URLs", job_id, len(cse_urls))
+    except Exception as e:
+        logger.warning("[CRAWL_AND_ANALYZE] %s: CSE failed: %s", job_id, e)
+
+    # Stage 2 — crawl_auto (picks HTML/Playwright/LLM strategy per site)
+    try:
+        result = crawler.crawl_auto(url=root_url, progress_cb=cb)
+        crawl_urls = [u.strip() for u in (result.get("urls") or result.get("pdfs") or []) if u]
+        crawl_source = result.get("source") or "?"
+        crawl_reason = result.get("reason") or "?"
+        logger.info("[CRAWL_AND_ANALYZE] %s: crawl_auto → %d URLs (source=%s, reason=%s)",
+                    job_id, len(crawl_urls), crawl_source, crawl_reason)
+    except Exception as e:
+        logger.warning("[CRAWL_AND_ANALYZE] %s: crawl_auto failed: %s", job_id, e)
+        crawl_source, crawl_reason = "error", str(e)[:120]
+
+    # Union, preserve order
+    urls = list(dict.fromkeys(cse_urls + crawl_urls))
+
     crawl_meta = {
-        "source": result.get("source") or "?",
-        "reason": result.get("reason") or "?",
-        "ms": int(result.get("ms") or 0),
-        "raw_count": len(urls),
+        "cse_count": len(cse_urls),
+        "crawl_count": len(crawl_urls),
+        "crawl_source": crawl_source if 'crawl_source' in locals() else "?",
+        "crawl_reason": crawl_reason if 'crawl_reason' in locals() else "?",
+        "total_unique": len(urls),
+        "domain": domain,
     }
-    logger.info("[CRAWL_AND_ANALYZE] %s: crawl_auto → %s", job_id, crawl_meta)
-
-    # If HTML strategy returned nothing, force a Playwright re-try. This
-    # is a safety net for sites whose JS-detection heuristic missed.
-    if not urls and crawler._HAS_PLAYWRIGHT:  # type: ignore[attr-defined]
-        try:
-            from app.services import playwright_crawler
-            logger.info("[CRAWL_AND_ANALYZE] %s: HTML found 0, forcing Playwright", job_id)
-            pw = playwright_crawler.crawl_with_playwright(
-                url=root_url, wait_time=3.0, timeout=60000, max_pdfs=None,
-            )
-            urls = [u.strip() for u in (pw.get("urls") or pw.get("pdfs") or []) if u]
-            crawl_meta["playwright_fallback"] = True
-            crawl_meta["playwright_count"] = len(urls)
-            logger.info("[CRAWL_AND_ANALYZE] %s: Playwright → %d URLs",
-                        job_id, len(urls))
-        except Exception as e:
-            logger.warning("[CRAWL_AND_ANALYZE] %s: Playwright fallback failed: %s",
-                           job_id, e)
-            crawl_meta["playwright_error"] = str(e)[:200]
-
-    urls = list(dict.fromkeys(urls))
-
-    # Stash diagnostics on the job for visibility
+    logger.info("[CRAWL_AND_ANALYZE] %s: discovery → %s", job_id, crawl_meta)
     jobs_store.update_job(job_id, state_patch={"crawl_meta": crawl_meta})
 
     # Respect the max_pages-style cap as a cap on results (the crawler's
